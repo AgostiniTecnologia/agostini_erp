@@ -38,7 +38,7 @@
                 <th>Assistência</th>
                 <th>Inadimplência</th>
             {{--<th>Lucro</th>--}}  
-            {{--<th>Custo Total</th>--}}
+                <th>Custo Total</th>
             {{--<th>Comercialização</th>--}}
                 <th>Lucro Total</th>
                 <th>Preço Final</th>
