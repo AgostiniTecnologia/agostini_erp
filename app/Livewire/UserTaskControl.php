@@ -237,6 +237,7 @@ class UserTaskControl extends Component
                 throw ValidationException::withMessages(['scan' => 'Você já possui uma tarefa ativa ou pausada. Finalize-a antes de iniciar outra.']);
             }
 
+            // 1. Cria a nova tarefa
             $newTask = UserCurrentTask::create([
                 'user_uuid' => $userId,
                 'production_order_item_uuid' => $orderItem->uuid,
@@ -246,6 +247,9 @@ class UserTaskControl extends Component
                 'status' => 'active',
                 'total_active_seconds' => 0,
             ]);
+
+            // 2. ATUALIZAÇÃO CRÍTICA: Inicia a Ordem de Produção (OP) se ainda não estiver iniciada
+            $orderItem->productionOrder->startProduction();
 
             //DB::commit();
             Log::info('UserTaskControl: Nova tarefa iniciada com sucesso.', ['taskId' => $newTask->uuid]);
@@ -540,6 +544,16 @@ class UserTaskControl extends Component
             // Atualizar ProductionOrderItem
             $currentItemTotalQuantity = $taskToFinish->productionOrderItem->quantity_produced ?? 0;
             $finalTotalQuantityForItem = $currentItemTotalQuantity;
+
+            // CRÍTICO: Verifica se a OP deve ser concluída
+            $productionOrder = $taskToFinish->productionOrderItem->productionOrder;
+            $totalPlanned = $productionOrder->items()->sum('quantity_planned');
+            $totalProduced = $productionOrder->items()->sum('quantity_produced') + $quantityProducedSession; // Inclui a produção desta sessão
+
+            if ($totalProduced >= $totalPlanned) {
+                $productionOrder->completeProduction();
+                Log::info('UserTaskControl: finishTask() - Ordem de Produção concluída.', ['orderNumber' => $productionOrder->order_number]);
+            }
 
             // Adiciona a quantidade da sessão apenas se a tarefa estava ativa antes de finalizar.
             // Se estava pausada, a $quantityProducedSession já foi (ou deveria ter sido)

@@ -10,12 +10,14 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Auth; // <-- Import the Auth facade
+use Illuminate\Support\Carbon; // Importar Carbon para now()
 
 class ProductionOrder extends Model
 {
     use HasFactory, HasUuids, SoftDeletes;
 
     const STATUS_COMPLETED = 'Concluída';
+    const STATUS_IN_PROGRESS = 'Em Andamento';
     protected $primaryKey = 'uuid';
     public $incrementing = false;
     protected $keyType = 'string';
@@ -80,6 +82,32 @@ class ProductionOrder extends Model
 
     // --- END RELATIONSHIPS ---
 
+
+    /**
+     * Registra a data de início real da OP e muda o status para 'Em Andamento'.
+     */
+    public function startProduction(): void
+    {
+        if (is_null($this->start_date)) {
+            $this->start_date = now();
+        }
+        if ($this->status !== self::STATUS_COMPLETED) {
+            $this->status = self::STATUS_IN_PROGRESS;
+        }
+        $this->save();
+    }
+
+    /**
+     * Registra a data de conclusão real da OP e muda o status para 'Concluída'.
+     */
+    public function completeProduction(): void
+    {
+        if (is_null($this->completion_date)) {
+            $this->completion_date = now();
+        }
+        $this->status = self::STATUS_COMPLETED;
+        $this->save();
+    }
 
     protected static function booted(): void
     {

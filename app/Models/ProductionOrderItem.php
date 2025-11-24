@@ -102,6 +102,9 @@ class ProductionOrderItem extends Model
                 'notes' => "Produto " . $produto->nome . " adicionado (" . $model->quantity_produced . "/" . $model->quantity_planned . ")",
             ]);
 
+            // Tenta iniciar a produção da Ordem de Produção se ainda não tiver sido iniciada
+            $model->productionOrder->startProduction();
+
             $stepUuids = $produto->productionSteps()->pluck('production_steps.uuid')->all();
             foreach ($stepUuids as $stepUuid) {
                 ProductionOrderItemStep::create([

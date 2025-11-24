@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\FinancialTransactionController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use App\Models\User;
+use App\Http\Controllers\Api\AiReportController;
 
 // LOGIN (fora do middleware)
 Route::post('/login', function (Request $request) {
@@ -67,4 +68,6 @@ Route::middleware('auth:sanctum')->group(function () {
 
     //Transação financeira
     Route::apiResource('financialTransaction', FinancialTransactionController::class);
+
+    Route::post('ai/production/generate-pdf', [AiReportController::class, 'generatePdf']);
 });

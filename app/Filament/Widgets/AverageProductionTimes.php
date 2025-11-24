@@ -13,6 +13,7 @@ use Filament\Widgets\TableWidget as BaseWidget;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Log; // Para debug, se necessário
 use Illuminate\Support\Collection; // Adicionar Collection
+use Illuminate\Support\Facades\DB; // Adicionar DB para a função TIMESTAMPDIFF
 
 class AverageProductionTimes extends BaseWidget
 {
@@ -111,8 +112,9 @@ class AverageProductionTimes extends BaseWidget
                         PauseReason::TYPE_DEAD_TIME,
                         PauseReason::TYPE_MANDATORY_BREAK
                     ])
-                    ->whereNotNull('task_pause_logs.duration_seconds')
-                    ->sum('task_pause_logs.duration_seconds');
+                    ->whereNotNull('task_pause_logs.resumed_at')
+                    ->whereNotNull('task_pause_logs.paused_at')
+                    ->sum(DB::raw('TIMESTAMPDIFF(SECOND, task_pause_logs.paused_at, task_pause_logs.resumed_at)'));
             }
 
             $effectiveSecondsForOrder = max(0, $leadTimeSeconds - $currentOrderNonProductivePauseSeconds);
