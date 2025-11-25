@@ -183,7 +183,7 @@
             </div>
 
                 {{-- Opção manual de colar código --}}
-            <div class="p-4 bg-gray-100 rounded-lg mt-4">
+           {{-- <div class="p-4 bg-gray-100 rounded-lg mt-4">
                     <h3 class="text-sm font-semibold mb-2 text-gray-700">Inserir QR Code manualmente</h3>
                     <div class="flex gap-2">
                         <input 
@@ -202,7 +202,7 @@
                     <p class="text-xs text-gray-500 mt-1">
                         Use esta opção caso não tenha câmera disponível. Cole o conteúdo exato do código.
                     </p>
-                </div>
+                </div>--}}
 
             {{-- Exibição de Erro do Scanner --}}
             <div id="qr-reader-results" class="mt-2 text-sm text-center text-red-600 dark:text-red-400" x-text="scanErrorMessage" x-show="scanErrorMessage"></div>
