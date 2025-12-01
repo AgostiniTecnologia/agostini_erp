@@ -14,9 +14,16 @@
         .chart { text-align:center; margin: 12px 0; }
         .analysis { background:#fbfbfb; padding:12px; border-left:4px solid #007bff; white-space: pre-wrap; }
         .muted { color:#666; font-size:11px; }
+        #logo{width: 150px;}
     </style>
 </head>
 <body>
+     <header>
+        <div>
+            <img src="images/logo-agostini-full_color-1-horizontal.png" alt="Agostini Tecnologia de Gestão" id="logo">
+        </div>
+    </header>
+    
     <h1>Relatório Inteligente de Produção</h1>
     <div class="muted">Gerado em: {{ $generated_at->format('Y-m-d H:i') }}</div>
 
