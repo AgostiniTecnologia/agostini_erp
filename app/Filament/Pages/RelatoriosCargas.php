@@ -29,6 +29,7 @@ class RelatoriosCargas extends Page implements HasForms
     public ?string $data_fim = null;
     public ?string $motorista_id = null;
     public ?string $status = null;
+    public ?array $superTransportReport = null;
 
     public array $dadosRelatorio = [];
 
@@ -142,6 +143,31 @@ class RelatoriosCargas extends Page implements HasForms
             \Filament\Actions\Action::make('filtrar')
                 ->label('Gerar Relatório')
                 ->submit('gerarRelatorio'),
+        ];
+    }
+
+    protected function getHeaderActions(): array
+    {
+        return [
+
+            // ============================================
+            //  BOTÃO NOVO → BAIXAR RELATÓRIO DE TRANSPORTE
+            // ============================================
+            \Filament\Actions\Action::make('baixar_relatorio_transporte')
+                ->label('Baixar Relatório')
+                ->icon('heroicon-o-printer')
+                ->color('primary')
+                ->action(function () {
+                    $start = $this->data_inicio;
+                    $end   = $this->data_fim;
+
+                    $url = route('transporte.relatorio.pdf', [
+                        'inicio' => $start,
+                        'fim'    => $end,
+                    ]);
+
+                    $this->js("window.open('{$url}', '_blank');");
+                }),
         ];
     }
 }

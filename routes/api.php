@@ -11,6 +11,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use App\Models\User;
 use App\Http\Controllers\Api\AiReportController;
+use App\Http\Controllers\Api\TransporteReportController;
+use App\Http\Controllers\Api\SalesReportController;
 
 // LOGIN (fora do middleware)
 Route::post('/login', function (Request $request) {
@@ -38,6 +40,12 @@ Route::post('/login', function (Request $request) {
         ]
     ]);
 });
+
+ // Relatórios:
+Route::get('/relatorio/transporte/pdf', [TransporteReportController::class, 'gerarPdf'])
+    ->name('transporte.relatorio.pdf');
+Route::get('/relatorio/vendas/pdf', [SalesReportController::class, 'gerarPdf'])
+    ->name('sales.performance.pdf');
 
 // ROTAS PROTEGIDAS
 Route::middleware('auth:sanctum')->group(function () {
@@ -70,4 +78,5 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('financialTransaction', FinancialTransactionController::class);
 
     Route::post('ai/production/generate-pdf', [AiReportController::class, 'generatePdf']);
+ 
 });

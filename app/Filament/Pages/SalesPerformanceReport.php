@@ -135,10 +135,9 @@ class SalesPerformanceReport extends Page implements HasForms
                 $monthEnd = $monthDate->copy()->endOfMonth();
 
 	                // MODIFICAÇÃO PRINCIPAL AQUI: Buscar a meta ativa para o período
-	                $activeGoal = SalesGoal::where('user_id', $salesperson->uuid)
-	                    // ->where('company_id', $salesperson->company_id) // O TenantScope já deve cuidar disso
-	                    ->where('period', $monthStart->toDateString()) // Busca a meta exata para o mês
-	                    ->first(); // Pega o registro completo da meta
+	              $activeGoal = $salesperson->salesGoals()
+                    ->where('period', $monthStart->toDateString())
+                    ->first();
 	
 	                $goalAmount = $activeGoal ? (float)$activeGoal->goal_amount : 0;
 	                $commissionType = $activeGoal ? $activeGoal->commission_type : 'none';
@@ -201,9 +200,28 @@ class SalesPerformanceReport extends Page implements HasForms
 	        $this->reportData = $report;
 	    }
 
-    protected function getHeaderActions(): array
+     protected function getHeaderActions(): array
     {
-        return [];
+        return [
+
+            // ============================================
+            //  BOTÃO NOVO → BAIXAR RELATÓRIO DE TRANSPORTE
+            // ============================================
+          \Filament\Actions\Action::make('baixar_relatorio_vendas')
+            ->label('Gerar Relatório')
+            ->icon('heroicon-o-printer')
+            ->color('primary')
+            ->action(function () {
+                $start = $this->start_month;
+                $end   = $this->end_month;
+
+                $url = route('sales.performance.pdf', [
+                    'inicio' => $start,
+                    'fim'    => $end,
+                ]);
+
+                $this->js("window.open('{$url}', '_blank');");
+            }),
+        ];
     }
 }
-

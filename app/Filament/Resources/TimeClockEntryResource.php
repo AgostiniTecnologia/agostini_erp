@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Illuminate\Support\Facades\Auth;
 use Filament\Forms\Get;
+use Carbon\Carbon;
 
 class TimeClockEntryResource extends Resource
 {
@@ -213,6 +214,17 @@ class TimeClockEntryResource extends Resource
             ->actions([
                 Tables\Actions\EditAction::make(),
             ])
+            ->headerActions([
+               Tables\Actions\Action::make('Gerar Relatório RH')
+                ->label('Gerar Relatório RH')
+                ->url(fn () => route('time.clock.pdf', [
+                    'inicio' => now()->startOfMonth()->format('Y-m-d'),
+                    'fim' => now()->endOfMonth()->format('Y-m-d'),
+                ]))
+                ->openUrlInNewTab()
+                ->color('success')
+                ->icon('heroicon-o-document')
+            ])  
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
 //                    Tables\Actions\DeleteBulkAction::make(),
@@ -222,7 +234,7 @@ class TimeClockEntryResource extends Resource
             ])
             ->defaultSort('recorded_at', 'desc')
             ->emptyStateHeading('Nenhuma batida de ponto encontrada')
-            ->emptyStateDescription('As batidas de ponto dos usuários aparecerão aqui.');
+            ->emptyStateDescription('As batidas de ponto dos usuários aparecerão aqui.'); 
     }
 
     public static function getRelations(): array

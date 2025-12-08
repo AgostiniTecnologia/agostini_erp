@@ -15,17 +15,17 @@ class AiReportService
 
     public function __construct(ChartSvgService $chartService)
     {
-        $this->apiKey = env('OPENAI_API_KEY', '');
-        $this->model = env('OPENAI_MODEL', 'gpt-4.1-mini');
-        $this->maxTokens = (int) env('AI_MAX_TOKENS', 1500);
-        $this->httpTimeout = (int) env('AI_HTTP_TIMEOUT', 30);
+        $this->apiKey = config('openai.api_key', '');
+        $this->model = config('openai.model', 'gpt-4.1-mini');
+        $this->maxTokens = (int) config('openai.max_tokens', 1500);
+        $this->httpTimeout = (int) config('openai.request_timeout', 30);
         $this->chartService = $chartService;
     }
 
     public function analyze(string $systemPrompt, string $userContent, array $options = []): string
     {
         if (empty($this->apiKey)) {
-            throw new \RuntimeException("OPENAI_API_KEY não está definido no .env");
+            throw new \RuntimeException("OPENAI_API_KEY não está definido no .env ou config/openai.php");
         }
 
         $payload = [

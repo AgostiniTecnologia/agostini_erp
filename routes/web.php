@@ -7,9 +7,9 @@ use App\Http\Controllers\ProductionOrderPdfController;
 use App\Http\Controllers\TimeClockController;
 use App\Http\Controllers\VisitWithoutOrderPdfController;
 use App\Http\Controllers\PricingTablePdfController;
-use App\Http\Controllers\SyncController;
-use App\Models\Client;
-use App\Models\Product;
+use App\Http\Controllers\Api\FinanceReportController;
+use App\Http\Controllers\Api\SalesReportController;
+use App\Http\Controllers\Api\TimeClockReportController;
 
 Route::redirect('/', '/app');
 
@@ -41,17 +41,12 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/pricing-table/pdf', [PricingTablePdfController::class, 'generatePdf'])
         ->name('pricing-table.pdf');
 
-    Route::middleware('auth')->get('/sync-down', [SyncController::class, 'syncDown']);
-    
-    // 🔹 Adicionando o endpoint protegido do PWA (sync-down)
-    Route::get('/sync-down', function () {
-        // Retorna apenas os campos essenciais para não pesar o PWA
-        $clients = Client::select('uuid', 'name', 'taxNumber', 'email', 'phone_number')->get();
-        $products = Product::select('uuid', 'description', 'sale_price', 'stock')->get();
+   Route::get('/relatorio/financeiro/pdf', [FinanceReportController::class, 'generatePdf'])
+    ->name('finance.pdf');
 
-        return response()->json([
-            'clients' => $clients,
-            'products' => $products,
-        ]);
-    })->name('sync.down');
+    Route::get('/relatorio/ponto/pdf', [TimeClockReportController::class, 'gerarPdf'])
+        ->name('time.clock.pdf');
+             
+    Route::get('/relatorio/vendas/pdf', [SalesReportController::class, 'gerarPdf'])->name('sales.performance.pdf');
+
 });

@@ -164,14 +164,33 @@ class FinancialDashboard extends Page implements HasForms
     protected function getHeaderActions(): array
     {
         return [
-            Actions\Action::make('print')
-                ->label('Imprimir PDF')
-                ->icon('heroicon-o-printer')
-                ->color('gray')
-                ->url(route('financial.report.pdf', [
-                    'start_date' => Carbon::parse($this->data['startDate'])->format('Y-m-d'),
-                    'end_date' => Carbon::parse($this->data['endDate'])->format('Y-m-d'),
-                ]), shouldOpenInNewTab: true),
-        ];
+        Actions\Action::make('print')
+            ->label('Imprimir PDF')
+            ->icon('heroicon-o-printer')
+            ->color('gray')
+            ->url(route('financial.report.pdf', [
+                'start_date' => Carbon::parse($this->data['startDate'])->format('Y-m-d'),
+                'end_date' => Carbon::parse($this->data['endDate'])->format('Y-m-d'),
+            ]), shouldOpenInNewTab: true),
+
+        Actions\Action::make('baixar_relatorio_financeiro')
+            ->label('Baixar Relatório')
+            ->icon('heroicon-o-printer')
+            ->color('primary')
+            ->action(function () {
+                // Pega as datas do filtro
+                $start = $this->data['startDate'];
+                $end   = $this->data['endDate'];
+
+                // Gera a URL do PDF com parâmetros
+                $url = route('finance.pdf', [
+                    'start_date' => $start,
+                    'end_date' => $end,
+                ]);
+
+                // Abre o PDF em nova aba
+                $this->js("window.open('{$url}', '_blank')");
+            }),
+    ];
     }
 }

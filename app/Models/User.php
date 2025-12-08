@@ -71,5 +71,9 @@ class User extends Authenticatable
             }
         });
     }
+    public function salesGoals()
+    {
+        return $this->hasMany(SalesGoal::class, 'user_id', 'uuid');
+    }
 }
 
