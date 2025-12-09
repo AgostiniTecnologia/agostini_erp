@@ -29,26 +29,11 @@ class ChartOfAccount extends Model
         'parent_uuid',
     ];
 
-    protected $casts = [
-        // Se necessário, adicione casts
-    ];
-
     public const TYPE_ASSET = 'asset';
     public const TYPE_LIABILITY = 'liability';
     public const TYPE_EQUITY = 'equity';
     public const TYPE_REVENUE = 'revenue';
     public const TYPE_EXPENSE = 'expense';
-
-    public static function getTypeOptions(): array
-    {
-        return [
-            self::TYPE_ASSET => 'Ativo',
-            self::TYPE_LIABILITY => 'Passivo',
-            self::TYPE_EQUITY => 'Patrimônio Líquido',
-            self::TYPE_REVENUE => 'Receita',
-            self::TYPE_EXPENSE => 'Despesa',
-        ];
-    }
 
     protected static function booted(): void
     {
@@ -66,66 +51,74 @@ class ChartOfAccount extends Model
         return $this->belongsTo(Company::class, 'company_id', 'uuid');
     }
 
-    public function parentAccount(): BelongsTo
-    {
-        return $this->belongsTo(ChartOfAccount::class, 'parent_uuid', 'uuid');
-    }
-
     public function childAccounts(): HasMany
     {
         return $this->hasMany(ChartOfAccount::class, 'parent_uuid', 'uuid');
     }
 
-    public function financialTransactions(): HasMany
-    {
-        return $this->hasMany(FinancialTransaction::class, 'chart_of_account_uuid', 'uuid');
-    }
-
-    private function collectDescendantUuids(self $account, array &$uuids): void
-    {
-        foreach ($account->childAccounts as $child) {
-            $uuids[] = $child->uuid;
-            $this->collectDescendantUuids($child, $uuids);
-        }
-    }
-
+    /**
+     * Nova função segura: retorna todas as contas descendentes SOMENTE da empresa atual
+     */
     public function getAllDescendantUuidsIncludingSelf(): array
     {
+        $companyId = Auth::user()->company_id;
+
+        $allAccounts = ChartOfAccount::query()
+            ->where('company_id', $companyId)
+            ->get()
+            ->keyBy('uuid');
+
         $uuids = [$this->uuid];
-        // Ensure childAccounts are loaded before starting recursion
-        $this->loadMissing('childAccounts');
-        $this->collectDescendantUuids($this, $uuids);
+
+        $searching = [$this->uuid];
+
+        while (!empty($searching)) {
+            $parent = array_pop($searching);
+
+            foreach ($allAccounts as $account) {
+                if ($account->parent_uuid === $parent) {
+                    $uuids[] = $account->uuid;
+                    $searching[] = $account->uuid;
+                }
+            }
+        }
+
         return array_unique($uuids);
     }
 
     /**
-     * Calculates the sum of financial transactions for this account and its descendants
-     * within a given period.
-     * Income is positive, Expense is negative.
+     * Busca valores da conta + descendentes filtrando empresa corretamente
      */
-   public function getValuesForPeriod(Carbon $startDate, Carbon $endDate, ?string $tipo = null): float
+    public function getValuesForPeriod(Carbon $startDate, Carbon $endDate, ?string $tipo = null): float
     {
-    $accountUuids = $this->getAllDescendantUuidsIncludingSelf();
-    $query = FinancialTransaction::query()
-        ->whereIn('chart_of_account_uuid', $accountUuids)
-        ->whereBetween('transaction_date', [$startDate->toDateString(), $endDate->toDateString()]);
+        $companyId = Auth::user()->company_id;
 
-    if ($tipo === 'entrada') {
-        $query->where('type', FinancialTransaction::TYPE_INCOME);
-        $total = $query->sum('amount');
-    } elseif ($tipo === 'saida') {
-        $query->where('type', FinancialTransaction::TYPE_EXPENSE);
-        $total = $query->sum('amount');
-    } else {
-        // saldo líquido: entradas positivas, saídas negativas
-        $total = $query->sum(DB::raw("
-            CASE 
-                WHEN type = '" . FinancialTransaction::TYPE_INCOME . "' THEN amount 
-                ELSE -amount 
-            END
-        "));
+        $accountUuids = $this->getAllDescendantUuidsIncludingSelf();
+
+        $query = FinancialTransaction::query()
+            ->where('company_id', $companyId)
+            ->whereIn('chart_of_account_uuid', $accountUuids)
+            ->whereBetween('transaction_date', [
+                $startDate->toDateString(),
+                $endDate->toDateString()
+            ]);
+
+        if ($tipo === 'entrada') {
+            $query->where('type', FinancialTransaction::TYPE_INCOME);
+            $total = $query->sum('amount');
+        } elseif ($tipo === 'saida') {
+            $query->where('type', FinancialTransaction::TYPE_EXPENSE);
+            $total = $query->sum('amount');
+        } else {
+            // saldo líquido
+            $total = $query->sum(DB::raw("
+                CASE 
+                    WHEN type = '" . FinancialTransaction::TYPE_INCOME . "' THEN amount
+                    ELSE -amount
+                END
+            "));
+        }
+
+        return (float) ($total / 100);
     }
-    // como os valores estão em centavos, normalizamos para reais
-    return (float) ($total / 100);
-}  
 }

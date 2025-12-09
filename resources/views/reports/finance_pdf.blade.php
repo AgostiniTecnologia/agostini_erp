@@ -67,5 +67,13 @@
             </tr>
         @endforeach
     </table>
+
+    <h3>Análises Inteligentes</h3>
+        <ul>
+        @foreach($reportData['analysis'] as $item)
+            <li>{{ $item }}</li>
+        @endforeach
+        </ul>
+
 </body>
 </html>

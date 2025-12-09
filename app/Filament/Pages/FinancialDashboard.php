@@ -114,10 +114,14 @@ class FinancialDashboard extends Page implements HasForms
         // Agora, as chaves 'startDate' e 'endDate' devem estar acessíveis com segurança em $currentFormData
         $startDate = Carbon::parse($currentFormData['startDate']);
         $endDate = Carbon::parse($currentFormData['endDate']);
+        $companyId = auth()->user()->company_id;
 
         $this->reportData = ChartOfAccount::query()
+            ->where('company_id', $companyId)
             ->whereNull('parent_uuid')
-            ->with(['childAccounts']) // Certifique-se de que o modelo ChartOfAccount carrega childAccounts recursivamente
+            ->with([
+                'childAccounts' => fn($q) => $q->where('company_id', $companyId)
+            ])
             ->orderBy('code')
             ->get();
 
