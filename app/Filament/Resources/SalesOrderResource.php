@@ -20,6 +20,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
+use Livewire\Component as Livewire;
 use Illuminate\Validation\ValidationException; // Para capturar erros de transição
 
 class SalesOrderResource extends Resource

@@ -13,6 +13,7 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Filament\Forms\Components\Section;
+use Livewire\Component as Livewire;
 use Filament\Forms\Components\Tabs; // Adicionado para usar abas
 use Filament\Tables\Filters\TrashedFilter;
 use Illuminate\Validation\Rule;

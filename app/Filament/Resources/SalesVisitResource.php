@@ -14,6 +14,7 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Illuminate\Support\HtmlString;
+use Livewire\Component as Livewire;
 use Illuminate\Support\Carbon; // Para formatação de data, se necessário
 
 class SalesVisitResource extends Resource

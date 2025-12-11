@@ -13,6 +13,8 @@ use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
 use Filament\Pages;
 use Filament\Panel;
+use Filament\Support\Facades\FilamentView;
+use Illuminate\Support\Facades\Blade;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
 use Filament\Support\Enums\MaxWidth;
@@ -77,6 +79,16 @@ class AppPanelProvider extends PanelProvider
                 DisableBladeIconComponents::class,
                 DispatchServingFilamentEvent::class,
             ])
+            ->renderHook(
+                'panels::head.end',
+                fn () => Blade::render('@include(\'pwa.serviceworker\')'),
+            )
+            ->renderHook(
+                'panels::scripts.end',
+                fn () => Blade::render('<script type="module" src="' . asset('js/offline_data.js') . '"></script>
+                                       <script type="module" src="' . asset('js/livewire_offline_bridge.js') . '"></script>
+                                       <script type="module" src="' . asset('js/sync_manager.js') . '"></script>'),
+            )
             ->authMiddleware([
                 Authenticate::class,
             ]);

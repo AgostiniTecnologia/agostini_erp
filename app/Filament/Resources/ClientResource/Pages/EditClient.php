@@ -15,7 +15,7 @@ class EditClient extends EditRecord
     protected static string $resource = ClientResource::class;
 
     public bool $isLoadingCnpj = false;
-    public bool $isLoadingCep = false;
+    public bool $isLoadingCep  = false;
 
     protected function getHeaderActions(): array
     {
@@ -29,7 +29,7 @@ class EditClient extends EditRecord
     #[On('fetchCnpjClientData')]
     public function fetchCnpjClientData(string $cnpj): void
     {
-        if (empty($cnpj)) {
+        if (!$cnpj) {
             Notification::make()
                 ->title('CNPJ não informado')
                 ->warning()
@@ -39,117 +39,107 @@ class EditClient extends EditRecord
 
         try {
             $this->isLoadingCnpj = true;
-            $response = Http::timeout(10)->get("https://publica.cnpj.ws/cnpj/{$cnpj}");
+
+            $response = Http::timeout(12)->get("https://publica.cnpj.ws/cnpj/{$cnpj}");
 
             if ($response->failed()) {
                 $status = $response->status();
-                $errorMessage = "Falha ao consultar o CNPJ (HTTP {$status}).";
-                if ($status === 404) {
-                    $errorMessage = "CNPJ não encontrado na base de dados.";
-                } elseif ($status === 429) {
-                    $errorMessage = "Muitas solicitações. Aguarde um momento e tente novamente.";
-                } elseif ($response->json('detalhes')) {
-                    $errorMessage = $response->json('detalhes');
-                }
+
+                $msg = match ($status) {
+                    404     => 'CNPJ não encontrado.',
+                    429     => 'Limite de consultas excedido. Aguarde um pouco.',
+                    default => "Falha ao consultar CNPJ ({$status})."
+                };
+
                 Notification::make()
-                    ->title('Erro na Consulta')
-                    ->body($errorMessage)
+                    ->title('Erro ao consultar CNPJ')
+                    ->body($msg)
                     ->danger()
                     ->send();
+
                 return;
             }
 
-            $data = $response->json();
+            $json = $response->json();
 
-            if (isset($data['status']) && $data['status'] == 404) {
+            if (($json['status'] ?? null) == 404) {
                 Notification::make()
-                    ->title('CNPJ Inválido ou Não Encontrado')
-                    ->body($data['titulo'] ?? 'O CNPJ informado não foi encontrado ou é inválido.')
+                    ->title('CNPJ inválido')
                     ->warning()
                     ->send();
                 return;
             }
 
-            $currentFormData = $this->form->getState();
-            $newLatFromApi = $data['estabelecimento']['latitude'] ?? null;
-            $newLngFromApi = $data['estabelecimento']['longitude'] ?? null;
+            $form = $this->form->getState();
 
-            $newData = [
-                'social_name' => $data['razao_social'] ?? $this->data['social_name'],
-                'name' => $data['nome_fantasia'] ?? $data['razao_social'] ?? $this->data['name'],
-                'email' => $data['estabelecimento']['email'] ?? $this->data['email'],
-                'phone_number' => $this->formatPhoneNumber($data['estabelecimento'] ?? []) ?? $this->data['phone_number'],
-                'address_street' => $data['estabelecimento']['logradouro'] ?? $this->data['address_street'],
-                'address_number' => $data['estabelecimento']['numero'] ?? $this->data['address_number'],
-                'address_complement' => $data['estabelecimento']['complemento'] ?? $this->data['address_complement'],
-                'address_district' => $data['estabelecimento']['bairro'] ?? $this->data['address_district'],
-                'address_city' => $data['estabelecimento']['cidade']['nome'] ?? $this->data['address_city'],
-                'address_state' => $data['estabelecimento']['estado']['sigla'] ?? $this->data['address_state'],
-                'address_zip_code' => preg_replace('/[^0-9]/', '', $data['estabelecimento']['cep'] ?? '') ?: $this->data['address_zip_code'],
-                'latitude' => $newLatFromApi ?? $this->data['latitude'],
-                'longitude' => $newLngFromApi ?? $this->data['longitude'],
+            $lat = $json['estabelecimento']['latitude']  ?? null;
+            $lng = $json['estabelecimento']['longitude'] ?? null;
+
+            $dados = [
+                'social_name'        => $json['razao_social'] ?? $form['social_name'],
+                'name'               => $json['nome_fantasia'] ?? $json['razao_social'] ?? $form['name'],
+                'email'              => $json['estabelecimento']['email'] ?? $form['email'],
+                'phone_number'       => $this->formatPhone($json['estabelecimento'] ?? []),
+
+                'address_street'     => $json['estabelecimento']['logradouro'] ?? null,
+                'address_number'     => $json['estabelecimento']['numero']     ?? null,
+                'address_complement' => $json['estabelecimento']['complemento']?? null,
+                'address_district'   => $json['estabelecimento']['bairro']     ?? null,
+                'address_city'       => $json['estabelecimento']['cidade']['nome'] ?? null,
+                'address_state'      => $json['estabelecimento']['estado']['sigla'] ?? null,
+
+                'address_zip_code'   => preg_replace('/[^0-9]/', '', $json['estabelecimento']['cep'] ?? ''),
+
+                'latitude'           => $lat ?? $form['latitude'],
+                'longitude'          => $lng ?? $form['longitude'],
             ];
-            $this->form->fill(array_merge($currentFormData, $newData));
+
+            $this->form->fill(array_merge($form, $dados));
 
             Notification::make()
-                ->title('CNPJ Consultado')
-                ->body('Dados preenchidos com base na consulta.')
+                ->title('Dados carregados!')
+                ->body('Consulta ao CNPJ concluída com sucesso.')
                 ->success()
                 ->send();
 
-            // Obtém as coordenadas finais que foram preenchidas no formulário
-            $filledLat = $this->form->getState()['latitude'] ?? null;
-            $filledLng = $this->form->getState()['longitude'] ?? null;
-
-            if ($newLatFromApi && $newLngFromApi) {
-                // Se a API do CNPJ forneceu coordenadas, dispara o evento para atualizar o mapa
-                $this->dispatch('updateMapLocation', lat: (float)$newLatFromApi, lng: (float)$newLngFromApi, target: 'map_visualization');
-            } elseif (empty($filledLat) && empty($filledLng)) {
-                // Se, após o preenchimento, o formulário ainda não tiver lat/lng (ou seja, nem a API nem o registro original tinham),
-                // tenta geocodificar o endereço.
+            if ($lat && $lng) {
+                $this->dispatch('updateMapLocation', lat: (float)$lat, lng: (float)$lng, target: 'map_visualization');
+            } else {
                 $this->geocodeAddressAndFillCoordinates();
             }
-            // Se $filledLat e $filledLng estiverem presentes (da API ou do registro original),
-            // e não vieram diretamente da API (primeira condição falsa),
-            // o campo de mapa reativo já deve ter se atualizado.
-            // Um dispatch explícito para este caso poderia ser adicionado se o mapa não estiver centralizando corretamente:
-            // elseif ($filledLat && $filledLng) {
-            //     $this->dispatch('updateMapLocation', lat: (float)$filledLat, lng: (float)$filledLng, target: 'map_visualization');
-            // }
 
-        } catch (\Illuminate\Http\Client\ConnectionException $e) {
-            Notification::make()
-                ->title('Erro de Conexão')
-                ->body('Não foi possível conectar ao serviço de consulta de CNPJ.')
-                ->danger()
-                ->send();
         } catch (\Exception $e) {
+            Log::error('Erro ao consultar CNPJ (EditClient): ' . $e->getMessage());
+
             Notification::make()
-                ->title('Erro na Consulta')
-                ->body('Ocorreu um erro inesperado: ' . $e->getMessage())
+                ->title('Erro ao consultar CNPJ')
+                ->body('Ocorreu um erro inesperado.')
                 ->danger()
                 ->send();
-            Log::error('Erro na consulta de CNPJ: ' . $e->getMessage(), ['exception' => $e]);
+
         } finally {
             $this->isLoadingCnpj = false;
         }
     }
 
-    protected function formatPhoneNumber(array $estabelecimentoData): ?string
-    {
-        $ddd = $estabelecimentoData['ddd1'] ?? $estabelecimentoData['ddd'] ?? null;
-        $phone = $estabelecimentoData['telefone1'] ?? $estabelecimentoData['telefone'] ?? null;
 
-        if ($ddd && $phone) {
-            return preg_replace('/[^0-9]/', '', $ddd . $phone);
+    protected function formatPhone(array $data): ?string
+    {
+        $ddd  = $data['ddd1']      ?? $data['ddd']      ?? null;
+        $fone = $data['telefone1'] ?? $data['telefone'] ?? null;
+
+        if ($ddd && $fone) {
+            return preg_replace('/[^0-9]/', '', $ddd . $fone);
         }
+
         return null;
     }
+
 
     #[On('fetchCepData')]
     public function fetchCepData(string $cep): void
     {
-        if (empty($cep)) {
+        if (!$cep) {
             Notification::make()
                 ->title('CEP não informado')
                 ->warning()
@@ -159,159 +149,116 @@ class EditClient extends EditRecord
 
         try {
             $this->isLoadingCep = true;
-            $response = Http::timeout(5)->get("https://viacep.com.br/ws/{$cep}/json/");
+
+            $response = Http::timeout(8)->get("https://viacep.com.br/ws/{$cep}/json/");
 
             if ($response->failed()) {
                 Notification::make()
-                    ->title('Erro na Consulta de CEP')
-                    ->body("Falha ao consultar o CEP (HTTP {$response->status()}).")
+                    ->title('Erro ao consultar CEP')
+                    ->body("Falha ao consultar CEP ({$response->status()}).")
                     ->danger()
                     ->send();
                 return;
             }
 
-            $data = $response->json();
+            $json = $response->json();
 
-            if (isset($data['erro']) && $data['erro'] === true) {
+            if (!empty($json['erro'])) {
                 Notification::make()
-                    ->title('CEP Não Encontrado')
-                    ->body('O CEP informado não foi encontrado na base de dados.')
+                    ->title('CEP não encontrado')
                     ->warning()
                     ->send();
                 return;
             }
 
-            $currentFormData = $this->form->getState();
-            $newData = [
-                'address_street' => $data['logradouro'] ?? $this->data['address_street'],
-                'address_complement' => $data['complemento'] ?? $this->data['address_complement'],
-                'address_district' => $data['bairro'] ?? $this->data['address_district'],
-                'address_city' => $data['localidade'] ?? $this->data['address_city'],
-                'address_state' => $data['uf'] ?? $this->data['address_state'],
+            $form = $this->form->getState();
+
+            $dados = [
+                'address_street'     => $json['logradouro'] ?? $form['address_street'],
+                'address_complement' => $json['complemento'] ?? $form['address_complement'],
+                'address_district'   => $json['bairro'] ?? $form['address_district'],
+                'address_city'       => $json['localidade'] ?? $form['address_city'],
+                'address_state'      => $json['uf'] ?? $form['address_state'],
             ];
-            $this->form->fill(array_merge($currentFormData, $newData));
+
+            $this->form->fill(array_merge($form, $dados));
 
             Notification::make()
-                ->title('CEP Consultado')
-                ->body('Endereço preenchido com base na consulta do CEP.')
+                ->title('Endereço carregado!')
+                ->body('Dados do CEP aplicados.')
                 ->success()
                 ->send();
 
             $this->geocodeAddressAndFillCoordinates();
 
-        } catch (\Illuminate\Http\Client\ConnectionException $e) {
-            Notification::make()
-                ->title('Erro de Conexão (CEP)')
-                ->body('Não foi possível conectar ao serviço de consulta de CEP.')
-                ->danger()
-                ->send();
         } catch (\Exception $e) {
+            Log::error('Erro ao consultar CEP (EditClient): ' . $e->getMessage());
+
             Notification::make()
-                ->title('Erro na Consulta de CEP')
-                ->body('Ocorreu um erro inesperado: ' . $e->getMessage())
+                ->title('Erro ao consultar CEP')
+                ->body('Erro inesperado.')
                 ->danger()
                 ->send();
-            Log::error('Erro na consulta de CEP: ' . $e->getMessage(), ['exception' => $e]);
+
         } finally {
             $this->isLoadingCep = false;
         }
     }
 
+
     protected function geocodeAddressAndFillCoordinates(): void
     {
-        $formData = $this->form->getState();
+        $f = $this->form->getState();
 
-        $street = $formData['address_street'] ?? '';
-        $number = $formData['address_number'] ?? '';
-        $district = $formData['address_district'] ?? '';
-        $city = $formData['address_city'] ?? '';
-        $state = $formData['address_state'] ?? '';
-        $zipCode = preg_replace('/[^0-9]/', '', $formData['address_zip_code'] ?? '');
+        $rua   = $f['address_street']  ?? '';
+        $num   = $f['address_number']  ?? '';
+        $bairro= $f['address_district']?? '';
+        $cidade= $f['address_city']    ?? '';
+        $estado= $f['address_state']   ?? '';
+        $cep   = preg_replace('/[^0-9]/', '', $f['address_zip_code'] ?? '');
 
-        if (empty($street) || empty($city) || empty($state)) {
+        if (!$rua || !$cidade || !$estado) {
             return;
         }
 
-        $addressParts = array_filter([$street, $number, $district, $city, $state, $zipCode]);
-        $fullAddress = implode(', ', $addressParts);
+        $partes = array_filter([$rua, $num, $bairro, $cidade, $estado, $cep]);
+        $endereco = implode(', ', $partes);
 
-        $apiKey = config('filament-google-maps.key');
+        $key = config('filament-google-maps.key');
 
-        if (empty($apiKey)) {
-            Notification::make()
-                ->title('Chave da API Google Maps Ausente')
-                ->body('A chave da API do Google Maps não está configurada para geocodificação.')
-                ->danger()
-                ->send();
-            Log::warning('Tentativa de geocodificação sem API Key do Google Maps.');
+        if (!$key) {
+            Log::warning('API KEY Google Maps ausente em EditClient.');
             return;
         }
 
         try {
-            $response = Http::timeout(10)->get('https://maps.googleapis.com/maps/api/geocode/json', [
-                'address' => $fullAddress,
-                'key' => $apiKey,
-                'language' => 'pt-BR',
+            $resp = Http::timeout(10)->get('https://maps.googleapis.com/maps/api/geocode/json', [
+                'address' => $endereco,
+                'key'     => $key,
+                'language'=> 'pt-BR'
             ]);
 
-            if ($response->failed()) {
-                Notification::make()
-                    ->title('Erro na Geocodificação')
-                    ->body("Falha ao buscar coordenadas (HTTP {$response->status()}).")
-                    ->danger()
-                    ->send();
+            if ($resp->failed()) {
                 return;
             }
 
-            $geoData = $response->json();
+            $geo = $resp->json();
 
-            if ($geoData['status'] === 'OK' && !empty($geoData['results'][0]['geometry']['location'])) {
-                $location = $geoData['results'][0]['geometry']['location'];
-                $currentFormData = $this->form->getState();
-                $newLat = $location['lat'];
-                $newLng = $location['lng'];
-
-                $newData = [
-                    'latitude' => $newLat,
-                    'longitude' => $newLng,
-                ];
-                $this->form->fill(array_merge($currentFormData, $newData));
-                Notification::make()
-                    ->title('Coordenadas Encontradas')
-                    ->body('Latitude e Longitude atualizadas com base no endereço.')
-                    ->success()
-                    ->send();
-
-                $this->dispatch('updateMapLocation', lat: (float)$newLat, lng: (float)$newLng, target: 'map_visualization');
-
-            } elseif ($geoData['status'] === 'ZERO_RESULTS') {
-                Notification::make()
-                    ->title('Coordenadas Não Encontradas')
-                    ->body('Não foi possível encontrar coordenadas para o endereço fornecido.')
-                    ->warning()
-                    ->send();
-            } else {
-                Notification::make()
-                    ->title('Erro na Geocodificação')
-                    ->body("Resposta inesperada do serviço de geocodificação: " . ($geoData['error_message'] ?? $geoData['status']))
-                    ->danger()
-                    ->send();
-                Log::warning('Erro na geocodificação', ['status' => $geoData['status'], 'response' => $geoData]);
+            if (($geo['status'] ?? '') !== 'OK') {
+                return;
             }
 
-        } catch (\Illuminate\Http\Client\ConnectionException $e) {
-            Notification::make()
-                ->title('Erro de Conexão (Geocodificação)')
-                ->body('Não foi possível conectar ao serviço de geocodificação do Google Maps.')
-                ->danger()
-                ->send();
+            $loc = $geo['results'][0]['geometry']['location'];
+
+            $f['latitude']  = $loc['lat'];
+            $f['longitude'] = $loc['lng'];
+
+            $this->form->fill($f);
+
+            $this->dispatch('updateMapLocation', lat: (float)$loc['lat'], lng: (float)$loc['lng'], target: 'map_visualization');
+
         } catch (\Exception $e) {
-            Log::error('Erro na geocodificação: ' . $e->getMessage(), ['exception' => $e]);
-            Notification::make()
-                ->title('Erro na Geocodificação')
-                ->body('Ocorreu um erro inesperado ao buscar coordenadas. Consulte os logs.')
-                ->danger()
-                ->send();
+            Log::error('Erro ao geocodificar (EditClient): ' . $e->getMessage());
         }
     }
 }
