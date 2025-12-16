@@ -1,18 +1,13 @@
-/* public/js/pwa_helper.js
- * UtilitÃ¡rios e helpers para gerenciar PWA
- * Carregue este arquivo APÃ“S os scripts principais
- */
-
 (function() {
     'use strict';
 
     /**
-     * UtilitÃ¡rios PWA
+     * Utilitários PWA
      */
     const PWAHelper = {
         
         /**
-         * Verifica se estÃ¡ rodando como PWA instalado
+         * Verifica se está rodando como PWA instalado
          */
         isPWA: function() {
             return window.matchMedia('(display-mode: standalone)').matches ||
@@ -27,11 +22,11 @@
         },
 
         /**
-         * Solicita permissÃ£o para notificaÃ§Ãµes
+         * Solicita permissão para notificações
          */
         requestNotificationPermission: async function() {
             if (!('Notification' in window)) {
-                console.warn('[PWA] NotificaÃ§Ãµes nÃ£o suportadas');
+                console.warn('[PWA] Notificações não suportadas');
                 return false;
             }
 
@@ -48,11 +43,11 @@
         },
 
         /**
-         * Envia notificaÃ§Ã£o local
+         * Envia notificação local
          */
         sendNotification: function(title, options = {}) {
             if (Notification.permission !== 'granted') {
-                console.warn('[PWA] PermissÃ£o de notificaÃ§Ã£o negada');
+                console.warn('[PWA] Permissão de notificação negada');
                 return;
             }
 
@@ -106,17 +101,17 @@
          * Reinicia PWA (limpa cache e recarrega)
          */
         resetPWA: async function() {
-            console.log('[PWA] Reiniciando aplicaÃ§Ã£o...');
+            console.log('[PWA] Reiniciando aplicação...');
             
             await this.clearAllCaches();
             await this.unregisterServiceWorker();
             
-            // Recarregar pÃ¡gina
+            // Recarregar página
             window.location.reload(true);
         },
 
         /**
-         * ObtÃ©m informaÃ§Ãµes do PWA
+         * Obter informações do PWA
          */
         getInfo: async function() {
             const info = {
@@ -128,7 +123,7 @@
                 storage: {}
             };
 
-            // InformaÃ§Ãµes de storage
+            // Informações de storage
             if ('storage' in navigator && 'estimate' in navigator.storage) {
                 const estimate = await navigator.storage.estimate();
                 info.storage = {
@@ -162,7 +157,7 @@
                 }
             }
 
-            // Fila de sincronizaÃ§Ã£o
+            // Fila de sincronização
             if (typeof window.SyncManager !== 'undefined') {
                 info.syncQueue = await window.SyncManager.getSyncQueueStatus();
             }
@@ -171,16 +166,16 @@
         },
 
         /**
-         * Exibe informaÃ§Ãµes no console
+         * Exibe informações no console
          */
         printInfo: async function() {
             const info = await this.getInfo();
             
-            console.group('ðŸ“± PWA Information');
-            console.log('Modo PWA:', info.isPWA ? 'âœ… Sim' : 'âŒ NÃ£o');
-            console.log('Online:', info.isOnline ? 'âœ… Sim' : 'âŒ NÃ£o');
-            console.log('Service Worker:', info.hasServiceWorker ? 'âœ… Suportado' : 'âŒ NÃ£o suportado');
-            console.log('NotificaÃ§Ãµes:', info.notificationPermission);
+            console.group('PWA Information');
+            console.log('Modo PWA:', info.isPWA ? 'Sim' : 'Não');
+            console.log('Online:', info.isOnline ? 'Sim' : 'Não');
+            console.log('Service Worker:', info.hasServiceWorker ? 'Suportado' : 'Não suportado');
+            console.log('Notificações:', info.notificationPermission);
             
             if (info.storage.quota) {
                 console.log(`Storage: ${(info.storage.usage / 1024 / 1024).toFixed(2)} MB / ${(info.storage.quota / 1024 / 1024).toFixed(2)} MB (${info.storage.usagePercent}%)`);
@@ -203,11 +198,11 @@
             }
             
             if (info.syncQueue) {
-                console.group('Fila de SincronizaÃ§Ã£o');
+                console.group('Fila de Sincronização');
                 console.log('Total:', info.syncQueue.total);
                 console.log('Pendentes:', info.syncQueue.pending);
                 console.log('Sincronizados:', info.syncQueue.synced);
-                console.log('Sincronizando:', info.syncQueue.isSyncing ? 'Sim' : 'NÃ£o');
+                console.log('Sincronizando:', info.syncQueue.isSyncing ? 'Sim' : 'Não');
                 console.groupEnd();
             }
             
@@ -217,7 +212,7 @@
         },
 
         /**
-         * Monitora mudanÃ§as de conexÃ£o
+         * Monitora mudanças de conexão
          */
         onConnectionChange: function(callback) {
             window.addEventListener('online', () => callback(true));
@@ -225,7 +220,7 @@
         },
 
         /**
-         * Monitora atualizaÃ§Ãµes do Service Worker
+         * Monitora atualização do Service Worker
          */
         onServiceWorkerUpdate: function(callback) {
             if (!('serviceWorker' in navigator)) return;
@@ -244,7 +239,7 @@
         },
 
         /**
-         * Prompt de instalaÃ§Ã£o PWA
+         * Prompt de instalação PWA
          */
         setupInstallPrompt: function(onInstallPrompt) {
             let deferredPrompt;
@@ -276,16 +271,16 @@
     // Expor globalmente
     window.PWAHelper = PWAHelper;
 
-    // Auto-executar algumas funÃ§Ãµes
+    // Auto-executar algumas funções
     if (PWAHelper.isPWA()) {
-        console.log('ðŸŽ‰ Rodando como PWA instalado!');
+        console.log('Rodando como PWA instalado!');
     }
 
-    // Comandos Ãºteis no console
-    console.log('ðŸ’¡ Comandos disponÃ­veis:');
-    console.log('  PWAHelper.printInfo() - Exibe informaÃ§Ãµes do PWA');
+    // Comandos Úteis no console
+    console.log('  Comandos disponíveis:');
+    console.log('  PWAHelper.printInfo() - Exibe informações do PWA');
     console.log('  PWAHelper.resetPWA() - Reinicia PWA (limpa cache)');
     console.log('  PWAHelper.clearAllCaches() - Limpa todos os caches');
-    console.log('  PWAHelper.sendNotification(title, options) - Envia notificaÃ§Ã£o');
+    console.log('  PWAHelper.sendNotification(title, options) - Envia notificação');
 
 })();

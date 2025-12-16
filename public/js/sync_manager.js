@@ -1,7 +1,3 @@
-/* public/js/sync_manager.js
- * Gerenciador de sincronizaÃ§Ã£o offline
- */
-
 (function() {
     'use strict';
 
@@ -10,7 +6,7 @@
     let syncTimer = null;
 
     /**
-     * Verifica se hÃ¡ conexÃ£o real com a internet
+     * Verifica se há conexão real com a internet
      */
     async function hasRealInternet() {
         if (!navigator.onLine) {
@@ -30,37 +26,37 @@
             clearTimeout(timeoutId);
             return response && response.ok;
         } catch (error) {
-            console.log('[Sync] Sem conexÃ£o real:', error.message);
+            console.log('[Sync] Sem conexão real:', error.message);
             return false;
         }
     }
 
     /**
-     * ObtÃ©m CSRF token
+     * Obter CSRF token
      */
     function getCsrf() {
         return document.querySelector('meta[name="csrf-token"]')?.getAttribute("content") || "";
     }
 
     /**
-     * ObtÃ©m token de autenticaÃ§Ã£o
+     * Obter token de autenticação
      */
     async function getAuthToken() {
         return await window.OfflineData.getAuthToken();
     }
 
     /**
-     * Sincroniza a fila de operaÃ§Ãµes pendentes
+     * Sincroniza a fila de operações pendentes
      */
     async function syncQueue() {
         if (isSyncing) {
-            console.log('[Sync] JÃ¡ estÃ¡ sincronizando...');
-            return { success: false, message: 'Sync jÃ¡ em andamento' };
+            console.log('[Sync] Já está sincronizando...');
+            return { success: false, message: 'Sync já em andamento' };
         }
         
         const online = await hasRealInternet();
         if (!online) {
-            console.log("[Sync] Offline ou servidor inacessÃ­vel");
+            console.log("[Sync] Offline ou servidor inacessível");
             return { success: false, message: 'Offline' };
         }
 
@@ -75,16 +71,16 @@
                 return { success: true, message: 'Nada para sincronizar' };
             }
 
-            // Filtrar apenas operaÃ§Ãµes nÃ£o sincronizadas
+            // Filtrar apenas operações não sincronizadas
             const pendingQueue = queue.filter(op => !op.synced);
             
             if (pendingQueue.length === 0) {
-                console.log('[Sync] Todas operaÃ§Ãµes jÃ¡ sincronizadas');
+                console.log('[Sync] Todas operações já sincronizadas');
                 isSyncing = false;
                 return { success: true, message: 'Tudo sincronizado' };
             }
 
-            console.log(`[Sync] Sincronizando ${pendingQueue.length} operaÃ§Ãµes...`);
+            console.log(`[Sync] Sincronizando ${pendingQueue.length} operações...`);
 
             const token = await getAuthToken();
             
@@ -108,7 +104,7 @@
             const result = await response.json();
             console.log("[Sync] Resultado:", result);
 
-            // Marcar operaÃ§Ãµes como sincronizadas ou remover da fila
+            // Marcar operações como sincronizadas ou remover da fila
             const updatedQueue = queue.map(op => {
                 const wasSynced = pendingQueue.some(p => 
                     p.timestamp === op.timestamp && 
@@ -123,7 +119,7 @@
 
             await localforage.setItem('sync_queue', updatedQueue);
 
-            // Limpar operaÃ§Ãµes antigas jÃ¡ sincronizadas (mais de 7 dias)
+            // Limpar operações antigas já sincronizadas (mais de 7 dias)
             const sevenDaysAgo = new Date();
             sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
             
@@ -140,7 +136,7 @@
             // Atualizar dados locais com dados do servidor
             await refreshLocalData();
 
-            // Disparar evento de sincronizaÃ§Ã£o concluÃ­da
+            // Disparar evento de sincronização concluída
             window.dispatchEvent(new CustomEvent('sync-completed', { 
                 detail: { 
                     success: true, 
@@ -150,10 +146,10 @@
             }));
 
             isSyncing = false;
-            return { success: true, message: `${pendingQueue.length} operaÃ§Ãµes sincronizadas`, results: result };
+            return { success: true, message: `${pendingQueue.length} operações sincronizadas`, results: result };
 
         } catch (error) {
-            console.error("[Sync] ExceÃ§Ã£o:", error);
+            console.error("[Sync] Exceção:", error);
             isSyncing = false;
             
             window.dispatchEvent(new CustomEvent('sync-error', { 
@@ -213,16 +209,16 @@
     }
 
     /**
-     * Inicia o gerenciador de sincronizaÃ§Ã£o
+     * Inicia o gerenciador de sincronização
      */
     function startSyncManager() {
         // Sincronizar IMEDIATAMENTE quando voltar online
         window.addEventListener('online', () => {
-            console.log('[Sync] ðŸŒ ConexÃ£o detectada - sincronizando IMEDIATAMENTE');
-            setTimeout(syncQueue, 500); // Delay mÃ­nimo de 500ms para estabilizar
+            console.log('[Sync] Conexão detectada - sincronizando IMEDIATAMENTE');
+            setTimeout(syncQueue, 500); // Delay mínimo de 500ms para estabilizar
         });
 
-        // SincronizaÃ§Ã£o periÃ³dica (a cada 30 segundos quando online)
+        // Sincronização periódica (a cada 30 segundos quando online)
         if (syncTimer) {
             clearInterval(syncTimer);
         }
@@ -233,33 +229,33 @@
             }
         }, 30000); // 30 segundos
 
-        // SincronizaÃ§Ã£o inicial (se online)
+        // Sincronização inicial (se online)
         if (navigator.onLine) {
             setTimeout(syncQueue, 2000);
         }
 
-        // Sincronizar antes de fechar a pÃ¡gina (se online)
+        // Sincronizar antes de fechar a página (se online)
         window.addEventListener('beforeunload', () => {
             if (navigator.onLine) {
-                // Tentativa de sincronizaÃ§Ã£o antes de sair
-                // Nota: pode nÃ£o completar se a pÃ¡gina fechar muito rÃ¡pido
+                // Tentativa de sincronização antes de sair
+                // Nota: pode não completar se a página fechar muito rápido
                 syncQueue();
             }
         });
 
-        // Sincronizar quando a aba voltar a ficar visÃ­vel
+        // Sincronizar quando a aba voltar a ficar visível
         document.addEventListener('visibilitychange', () => {
             if (!document.hidden && navigator.onLine) {
-                console.log('[Sync] ðŸ‘ï¸ Aba visÃ­vel novamente - verificando sincronizaÃ§Ã£o');
+                console.log('[Sync] Aba visível novamente - verificando sincronização');
                 setTimeout(syncQueue, 1000);
             }
         });
 
-        console.log("[Sync] Manager iniciado com sincronizaÃ§Ã£o automÃ¡tica");
+        console.log("[Sync] Manager iniciado com sincronização automática");
     }
 
     /**
-     * Para o gerenciador de sincronizaÃ§Ã£o
+     * Para o gerenciador de sincronização
      */
     function stopSyncManager() {
         if (syncTimer) {
@@ -270,15 +266,15 @@
     }
 
     /**
-     * ForÃ§a sincronizaÃ§Ã£o manual
+     * Sincronização manual
      */
     async function forceSyncNow() {
-        console.log('[Sync] SincronizaÃ§Ã£o manual solicitada');
+        console.log('[Sync] Sincronização manual solicitada');
         return await syncQueue();
     }
 
     /**
-     * ObtÃ©m status da fila
+     * Obter status da fila
      */
     async function getSyncQueueStatus() {
         try {

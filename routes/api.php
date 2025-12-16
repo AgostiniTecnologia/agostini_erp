@@ -42,7 +42,7 @@ Route::post('/login', function (Request $request) {
     ]);
 });
 
- // RelatÃ³rios:
+ // Relatários:
 Route::get('/relatorio/transporte/pdf', [TransporteReportController::class, 'gerarPdf'])
     ->name('transporte.relatorio.pdf');
 Route::get('/relatorio/vendas/pdf', [SalesReportController::class, 'gerarPdf'])

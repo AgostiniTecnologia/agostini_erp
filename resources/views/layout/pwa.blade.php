@@ -44,7 +44,7 @@
                 .then(reg => console.log("PWA registrado com sucesso:", reg.scope))
                 .catch(err => console.error("Erro ao registrar Service Worker:", err));
         } else {
-            console.warn("Service Worker nÃ£o suportado no navegador.");
+            console.warn("Service Worker não suportado no navegador.");
         }
     </script>
 

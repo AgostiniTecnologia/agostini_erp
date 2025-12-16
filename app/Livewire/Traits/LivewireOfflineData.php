@@ -8,14 +8,14 @@ use Livewire\Attributes\On;
 /**
  * Trait LivewireOfflineData
  *
- * Fornece integraÃ§Ã£o entre componentes Livewire/Filament e IndexedDB (offline storage).
+ * Fornece integração entre componentes Livewire/Filament e IndexedDB (offline storage).
  * 
  * USO:
  * 1. Use o trait no seu componente Livewire/Filament
  * 2. Defina $offlineStoreName (ex: 'clients', 'products')
- * 3. Chame $this->loadOfflineData() no mount() ou em um botÃ£o
+ * 3. Chame $this->loadOfflineData() no mount() ou em um botão
  * 4. Use $this->offlineData para exibir os dados
- * 5. Use $this->saveOfflineRecord() para salvar alteraÃ§Ãµes offline
+ * 5. Use $this->saveOfflineRecord() para salvar alterações offline
  */
 trait LivewireOfflineData
 {
@@ -33,28 +33,28 @@ trait LivewireOfflineData
     public array $offlineData = [];
 
     /**
-     * Indica se os dados offline estÃ£o carregados
+     * Indica se os dados offline estão carregados
      */
     public bool $offlineDataLoaded = false;
 
     /**
-     * Indica se estÃ¡ em modo offline
+     * Indica se está em modo offline
      */
     public bool $isOffline = false;
 
     /**
-     * Contadores para sincronizaÃ§Ã£o
+     * Contadores para sincronização
      */
     public int $pendingSyncCount = 0;
 
     /**
      * Carrega dados do IndexedDB
-     * Chame este mÃ©todo no mount() ou quando precisar carregar dados offline
+     * Chame este método no mount() ou quando precisar carregar dados offline
      */
     public function loadOfflineData(): void
     {
         if (!property_exists($this, 'offlineStoreName') || empty($this->offlineStoreName)) {
-            Log::warning('LivewireOfflineData: $offlineStoreName nÃ£o definido no componente ' . static::class);
+            Log::warning('LivewireOfflineData: $offlineStoreName não definido no componente ' . static::class);
             return;
         }
 
@@ -81,7 +81,7 @@ trait LivewireOfflineData
     }
 
     /**
-     * Manipula atualizaÃ§Ãµes de dados offline vindas do JS
+     * Manipula atualizações de dados offline vindas do JS
      */
     #[On('offline-data-updated')]
     public function handleOfflineDataUpdate($payload): void
@@ -95,7 +95,7 @@ trait LivewireOfflineData
             $data = $payload['payload'] ?? $payload['data'] ?? [];
         }
 
-        // Ignorar se nÃ£o Ã© o store correto
+        // Ignorar se não à o store correto
         if ($storeName !== $this->offlineStoreName) {
             return;
         }
@@ -160,7 +160,7 @@ trait LivewireOfflineData
      * @param array $data Dados do registro
      * @param string $action 'create' ou 'update'
      * @param mixed|null $id ID do registro (para update)
-     * @return string|null ID temporÃ¡rio gerado (para create) ou ID existente
+     * @return string|null ID temporário gerado (para create) ou ID existente
      */
     public function saveOfflineRecord(array $data, string $action = 'create', $id = null): ?string
     {
@@ -169,7 +169,7 @@ trait LivewireOfflineData
             return null;
         }
 
-        // Para create, gerar ID temporÃ¡rio
+        // Para create, gerar ID temporário
         if ($action === 'create') {
             $tempId = 'temp-' . time() . '-' . uniqid();
             $data['id'] = $tempId;
@@ -180,7 +180,7 @@ trait LivewireOfflineData
             }
         }
 
-        // Adicionar Ã  fila de sincronizaÃ§Ã£o
+        // Adicionar à fila de sincronização
         $this->dispatch('addToSyncQueue', 
             storeName: $this->offlineStoreName,
             action: $action,
@@ -225,7 +225,7 @@ trait LivewireOfflineData
     }
 
     /**
-     * Atualiza status de conexÃ£o
+     * Atualiza status de conexão
      */
     #[On('connection-status-changed')]
     public function updateConnectionStatus($payload): void
@@ -239,17 +239,17 @@ trait LivewireOfflineData
     }
 
     /**
-     * SincronizaÃ§Ã£o concluÃ­da
+     * Sincronização concluída
      */
     #[On('sync-completed')]
     public function handleSyncCompleted($payload): void
     {
         $this->pendingSyncCount = 0;
         
-        // Recarregar dados apÃ³s sincronizaÃ§Ã£o
+        // Recarregar dados após sincronização
         $this->loadOfflineData();
         
-        // Notificar usuÃ¡rio
+        // Notificar usuário
         $this->dispatch('notify', [
             'type' => 'success',
             'message' => 'Dados sincronizados com sucesso!'
@@ -257,14 +257,14 @@ trait LivewireOfflineData
     }
 
     /**
-     * Erro na sincronizaÃ§Ã£o
+     * Erro na sincronização
      */
     #[On('sync-error')]
     public function handleSyncError($payload): void
     {
         $error = $payload['error'] ?? 'Erro desconhecido';
         
-        Log::warning('Erro na sincronizaÃ§Ã£o offline', [
+        Log::warning('Erro na sincronizaçãoo offline', [
             'component' => static::class,
             'error' => $error
         ]);
@@ -276,7 +276,7 @@ trait LivewireOfflineData
     }
 
     /**
-     * Busca um registro especÃ­fico nos dados offline
+     * Busca um registro específico nos dados offline
      */
     protected function findOfflineRecord($id): ?array
     {
@@ -291,7 +291,7 @@ trait LivewireOfflineData
     }
 
     /**
-     * Verifica se hÃ¡ dados offline disponÃ­veis
+     * Verifica se há dados offline disponí­veis
      */
     public function hasOfflineData(): bool
     {

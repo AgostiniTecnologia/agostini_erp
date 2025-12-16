@@ -12,7 +12,7 @@
      */
     function initBridge() {
         if (bridgeInitialized) {
-            console.log('[LivewireBridge] JÃ¡ inicializado');
+            console.log('[LivewireBridge] Já inicializado');
             return;
         }
 
@@ -52,7 +52,7 @@
             } else if (payload && payload.detail && payload.detail.storeName) {
                 storeName = payload.detail.storeName;
             } else if (Array.isArray(payload) && payload.length > 0) {
-                // Livewire v3 Ã s vezes envia array
+                // Livewire v3 as vezes envia array
                 if (typeof payload[0] === 'string') {
                     storeName = payload[0];
                 } else if (payload[0] && payload[0].storeName) {
@@ -61,7 +61,7 @@
             }
             
             if (!storeName) {
-                console.warn('[LivewireBridge] fetchOfflineData sem storeName vÃ¡lido', payload);
+                console.warn('[LivewireBridge] fetchOfflineData sem storeName válido', payload);
                 Livewire.dispatch('setOfflineData', { data: [] });
                 return;
             }
@@ -77,7 +77,7 @@
         });
 
         /**
-         * Livewire adiciona operaÃ§Ã£o Ã  fila de sincronizaÃ§Ã£o
+         * Livewire adiciona operação à fila de sincronização
          * Payload: { storeName, action, payload }
          */
         Livewire.on('addToSyncQueue', async (payload) => {
@@ -85,7 +85,7 @@
             
             let storeName, action, data;
             
-            // Extrair dados do payload (suporta mÃºltiplos formatos)
+            // Extrair dados do payload (suporta múltiplos formatos)
             if (Array.isArray(payload) && payload.length > 0) {
                 const item = payload[0];
                 storeName = item.storeName || item.detail?.storeName;
@@ -98,15 +98,15 @@
             }
             
             if (!storeName || !action || !data) {
-                console.warn('[LivewireBridge] addToSyncQueue payload invÃ¡lido:', payload);
+                console.warn('[LivewireBridge] addToSyncQueue payload inválido:', payload);
                 return;
             }
             
             try {
                 await window.OfflineData.addToSyncQueue(storeName, action, data);
-                console.log(`[LivewireBridge] OperaÃ§Ã£o adicionada: ${action} ${storeName}`);
+                console.log(`[LivewireBridge] Operação adicionada: ${action} ${storeName}`);
             } catch (error) {
-                console.error('[LivewireBridge] Erro ao adicionar Ã  fila:', error);
+                console.error('[LivewireBridge] Erro ao adicionar à fila:', error);
             }
         });
 
@@ -128,7 +128,7 @@
             }
             
             if (!storeName || !item) {
-                console.warn('[LivewireBridge] saveOfflineData payload invÃ¡lido:', payload);
+                console.warn('[LivewireBridge] saveOfflineData payload inválido:', payload);
                 return;
             }
             
@@ -158,7 +158,7 @@
             }
             
             if (!storeName || !itemId) {
-                console.warn('[LivewireBridge] deleteOfflineData payload invÃ¡lido:', payload);
+                console.warn('[LivewireBridge] deleteOfflineData payload inválido:', payload);
                 return;
             }
             
@@ -175,7 +175,7 @@
         // ==========================================
 
         /**
-         * Quando dados offline sÃ£o atualizados, notificar Livewire
+         * Quando dados offline são atualizados, notificar Livewire
          */
         window.addEventListener('offline-data-updated', (event) => {
             const detail = event.detail || {};
@@ -193,7 +193,7 @@
         });
 
         /**
-         * Quando sincronizaÃ§Ã£o Ã© concluÃ­da
+         * Quando sincronização é concluí­da
          */
         window.addEventListener('sync-completed', (event) => {
             const detail = event.detail || {};
@@ -207,7 +207,7 @@
         });
 
         /**
-         * Quando hÃ¡ erro na sincronizaÃ§Ã£o
+         * Quando hÃ¡ erro na sincronização
          */
         window.addEventListener('sync-error', (event) => {
             const detail = event.detail || {};
@@ -241,10 +241,10 @@
             }
         });
 
-        console.log('[LivewireBridge] âœ“ Inicializado com sucesso');
+        console.log('[LivewireBridge] Inicializado com sucesso');
     }
 
-    // Expor funÃ§Ã£o de inicializaÃ§Ã£o
+    // Expor função de inicialização
     window.LivewireBridge = {
         init: initBridge
     };

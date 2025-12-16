@@ -64,7 +64,7 @@
     <div class="card">
         <img src="/images/icons/icon-192x192.png" alt="Agostini Logo">
         <h1>Sem Conexão</h1>
-        <p>Você está offline. Algumas funcionalidades podem não estar disponÃ­veis.</p>
+        <p>Você está offline. Algumas funcionalidades podem não estar disponíveis.</p>
 
         <button class="retry" onclick="location.reload()">Tentar Novamente</button>
     </div>

@@ -1,19 +1,14 @@
-/* public/js/offline_data.js
- * Gerenciador de dados offline usando LocalForage
- * IMPORTANTE: Este arquivo NÃƒO usa ES modules para compatibilidade com carregamento direto
- */
-
 (function() {
     'use strict';
 
-    // ConfiguraÃ§Ã£o do LocalForage
+    // Configuração do LocalForage
     localforage.config({
         name: "AgostiniERP",
         storeName: "offline_data",
         description: "Cache de dados offline",
     });
 
-    // DefiniÃ§Ã£o de stores disponÃ­veis
+    // Definição de stores disponÃ­veis
     const DATA_STORES = {
         clients: "clients",
         products: "products",
@@ -67,11 +62,11 @@
     }
 
     /**
-     * Insere ou atualiza um item especÃ­fico
+     * Insere ou atualiza um item especí­fico
      */
     async function upsertItem(storeName, item) {
         if (!item || (typeof item.id === 'undefined' || item.id === null)) {
-            console.error("[OfflineData] upsertItem: item invÃ¡lido", item);
+            console.error("[OfflineData] upsertItem: item inválido", item);
             return false;
         }
         
@@ -94,7 +89,7 @@
     }
 
     /**
-     * Remove um item especÃ­fico
+     * Remove um item especí­fico
      */
     async function deleteItem(storeName, itemId) {
         try {
@@ -110,11 +105,11 @@
     }
 
     /**
-     * Adiciona operaÃ§Ã£o Ã  fila de sincronizaÃ§Ã£o
+     * Adiciona operação à fila de sincronização
      */
     async function addToSyncQueue(storeName, action, payload) {
         if (!storeName || !action || !payload) {
-            console.error("[OfflineData] addToSyncQueue: parÃ¢metros invÃ¡lidos", { storeName, action, payload });
+            console.error("[OfflineData] addToSyncQueue: parâmetros inválidos", { storeName, action, payload });
             return false;
         }
         
@@ -144,7 +139,7 @@
     }
 
     /**
-     * Salva token de autenticaÃ§Ã£o para uso offline
+     * Salva token de autenticação para uso offline
      */
     async function saveAuthToken(token) {
         try {
@@ -157,7 +152,7 @@
     }
 
     /**
-     * Recupera token de autenticaÃ§Ã£o
+     * Recupera token de autenticação
      */
     async function getAuthToken() {
         try {
@@ -169,32 +164,32 @@
     }
 
     /**
-     * Salva dados do usuÃ¡rio
+     * Salva dados do usuário
      */
     async function saveUserData(userData) {
         try {
             await localforage.setItem('user_data', userData);
             return true;
         } catch (error) {
-            console.error("[OfflineData] Erro ao salvar dados do usuÃ¡rio:", error);
+            console.error("[OfflineData] Erro ao salvar dados do usuario:", error);
             return false;
         }
     }
 
     /**
-     * Recupera dados do usuÃ¡rio
+     * Recupera dados do usuário
      */
     async function getUserData() {
         try {
             return await localforage.getItem('user_data');
         } catch (error) {
-            console.error("[OfflineData] Erro ao recuperar dados do usuÃ¡rio:", error);
+            console.error("[OfflineData] Erro ao recuperar dados do usuário:", error);
             return null;
         }
     }
 
     /**
-     * Limpa todos os dados offline (Ãºtil no logout)
+     * Limpa todos os dados offline (Útil no logout)
      */
     async function clearAllData() {
         try {
@@ -208,18 +203,18 @@
     }
 
     /**
-     * PrÃ©-carrega dados essenciais quando usuÃ¡rio faz login
+     * Pré-carrega dados essenciais quando usuário faz login
      */
     async function preloadEssentialData() {
         if (!navigator.onLine) {
-            console.log("[OfflineData] Offline - nÃ£o Ã© possÃ­vel prÃ©-carregar dados");
+            console.log("[OfflineData] Offline - não é possível pré-carregar dados");
             return false;
         }
 
         try {
             const token = await getAuthToken();
             if (!token) {
-                console.warn("[OfflineData] Sem token para prÃ©-carregamento");
+                console.warn("[OfflineData] Sem token para pré-carregamento");
                 return false;
             }
 
@@ -234,7 +229,7 @@
                 if (clientsResponse.ok) {
                     const clients = await clientsResponse.json();
                     await storeData('clients', clients.data || clients);
-                    console.log('[OfflineData] Clientes prÃ©-carregados');
+                    console.log('[OfflineData] Clientes pré-carregados');
                 }
             } catch (e) {
                 console.warn('[OfflineData] Erro ao carregar clientes:', e);
@@ -246,31 +241,31 @@
                 if (productsResponse.ok) {
                     const products = await productsResponse.json();
                     await storeData('products', products.data || products);
-                    console.log('[OfflineData] Produtos prÃ©-carregados');
+                    console.log('[OfflineData] Produtos pré-carregados');
                 }
             } catch (e) {
                 console.warn('[OfflineData] Erro ao carregar produtos:', e);
             }
 
-            // Buscar visitas de venda do usuÃ¡rio (Ãºltimos 30 dias)
+            // Buscar visitas de venda do usuário (Últimos 30 dias)
             try {
                 const visitsResponse = await fetch('/api/sales-visits?limit=100', { headers });
                 if (visitsResponse.ok) {
                     const visits = await visitsResponse.json();
                     await storeData('sales_visits', visits.data || visits);
-                    console.log('[OfflineData] Visitas prÃ©-carregadas');
+                    console.log('[OfflineData] Visitas pré-carregadas');
                 }
             } catch (e) {
                 console.warn('[OfflineData] Erro ao carregar visitas:', e);
             }
 
-            // Buscar pedidos de venda (Ãºltimos 30 dias)
+            // Buscar pedidos de venda (Últimos 30 dias)
             try {
                 const ordersResponse = await fetch('/api/sales-orders?limit=100', { headers });
                 if (ordersResponse.ok) {
                     const orders = await ordersResponse.json();
                     await storeData('sales_orders', orders.data || orders);
-                    console.log('[OfflineData] Pedidos prÃ©-carregados');
+                    console.log('[OfflineData] Pedidos pré-carregados');
                 }
             } catch (e) {
                 console.warn('[OfflineData] Erro ao carregar pedidos:', e);
@@ -278,7 +273,7 @@
 
             return true;
         } catch (error) {
-            console.error("[OfflineData] Erro no prÃ©-carregamento:", error);
+            console.error("[OfflineData] Erro no pré-carregamento:", error);
             return false;
         }
     }
@@ -303,7 +298,7 @@
 
     // Auto-preload quando voltar online
     window.addEventListener('online', () => {
-        console.log('[OfflineData] ConexÃ£o restaurada - iniciando prÃ©-carregamento');
+        console.log('[OfflineData] Conexão restaurada - iniciando pré-carregamento');
         preloadEssentialData();
     });
 

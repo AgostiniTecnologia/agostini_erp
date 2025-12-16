@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Validator;
 class OfflineSyncController extends Controller
 {
     /**
-     * Recebe a fila de sincronizaÃ§Ã£o enviada pelo navegador (PWA offline).
+     * Recebe a fila de sincronização enviada pelo navegador (PWA offline).
      */
     public function sync(Request $request)
     {
@@ -21,23 +21,23 @@ class OfflineSyncController extends Controller
         if (empty($queue)) {
             return response()->json([
                 'success' => true,
-                'message' => 'Fila de sincronizaÃ§Ã£o vazia.',
+                'message' => 'Fila de sincronização vazia.',
                 'results' => []
             ], 200);
         }
 
-        Log::info('Iniciando sincronizaÃ§Ã£o offline', [
+        Log::info('Iniciando sincronização offline', [
             'user_id' => auth()->id(),
             'queue_size' => count($queue)
         ]);
 
-        // Mapeamento: storeName â†’ Model associado
+        // Mapeamento: storeName até Model associado
         $modelMap = [
             'clients'       => \App\Models\Client::class,
             'products'      => \App\Models\Product::class,
             'sales_visits'  => \App\Models\SalesVisit::class,
             'sales_orders'  => \App\Models\SalesOrder::class,
-            // Adicione aqui os demais mÃ³dulos offline conforme necessÃ¡rio:
+            // Adicione aqui os demais módulos offline conforme necessário:
             // 'financial_entries' => \App\Models\FinancialEntry::class,
             // 'pricing_tables'    => \App\Models\PricingTable::class,
         ];
@@ -57,19 +57,19 @@ class OfflineSyncController extends Controller
                     $errors[] = [
                         'index'   => $index,
                         'status'  => 'error',
-                        'message' => 'OperaÃ§Ã£o invÃ¡lida ou incompleta.',
+                        'message' => 'Operação inválida ou incompleta.',
                         'item'    => $op
                     ];
                     continue;
                 }
 
-                // Verificar se store estÃ¡ mapeado
+                // Verificar se store está mapeado
                 if (!array_key_exists($storeName, $modelMap)) {
-                    Log::warning("OfflineSyncController: Store '{$storeName}' nÃ£o mapeado.", ['operation' => $op]);
+                    Log::warning("OfflineSyncController: Store '{$storeName}' não mapeado.", ['operation' => $op]);
                     $errors[] = [
                         'index'   => $index,
                         'status'  => 'error',
-                        'message' => "Store '{$storeName}' nÃ£o estÃ¡ mapeado no sistema.",
+                        'message' => "Store '{$storeName}' não está mapeado no sistema.",
                         'item'    => $op
                     ];
                     continue;
@@ -95,7 +95,7 @@ class OfflineSyncController extends Controller
                         'item'       => $op
                     ];
                     
-                    Log::warning('Erro de validaÃ§Ã£o na sincronizaÃ§Ã£o', [
+                    Log::warning('Erro de validação na sincronização', [
                         'operation' => $op,
                         'errors' => $e->errors()
                     ]);
@@ -116,27 +116,27 @@ class OfflineSyncController extends Controller
                 }
             }
 
-            // Commit apenas se nÃ£o houver erros crÃ­ticos
+            // Commit apenas se não houver erros crí­ticos
             if (count($errors) === 0) {
                 DB::commit();
                 
-                Log::info('SincronizaÃ§Ã£o offline concluÃ­da com sucesso', [
+                Log::info('Sincronização offline concluída com sucesso', [
                     'user_id' => auth()->id(),
                     'synced_count' => count($results)
                 ]);
                 
                 return response()->json([
                     'success' => true,
-                    'message' => 'SincronizaÃ§Ã£o concluÃ­da com sucesso.',
+                    'message' => 'Sincronização concluída com sucesso.',
                     'results' => $results,
                     'synced_count' => count($results),
                 ], 200);
             } else {
                 // Se houver erros, fazer rollback ou commit parcial
-                // (depende da sua regra de negÃ³cio)
-                DB::commit(); // Manter operaÃ§Ãµes bem-sucedidas
+                // (depende da sua regra de negócio)
+                DB::commit(); // Manter operações bem-sucedidas
                 
-                Log::warning('SincronizaÃ§Ã£o offline concluÃ­da com erros', [
+                Log::warning('Sincronização offline concluída com erros', [
                     'user_id' => auth()->id(),
                     'synced_count' => count($results),
                     'errors_count' => count($errors)
@@ -144,7 +144,7 @@ class OfflineSyncController extends Controller
                 
                 return response()->json([
                     'success' => false,
-                    'message' => 'SincronizaÃ§Ã£o concluÃ­da com erros.',
+                    'message' => 'Sincronização concluída com erros.',
                     'results' => $results,
                     'errors' => $errors,
                     'synced_count' => count($results),
@@ -155,7 +155,7 @@ class OfflineSyncController extends Controller
         } catch (\Exception $fatal) {
             DB::rollBack();
             
-            Log::error("Erro fatal na sincronizaÃ§Ã£o offline", [
+            Log::error("Erro fatal na sincronização offline", [
                 'user_id' => auth()->id(),
                 'error' => $fatal->getMessage(),
                 'trace' => $fatal->getTraceAsString()
@@ -163,14 +163,14 @@ class OfflineSyncController extends Controller
 
             return response()->json([
                 'success' => false,
-                'message' => 'Erro fatal durante a sincronizaÃ§Ã£o.',
+                'message' => 'Erro fatal durante a sincronização.',
                 'error'   => $fatal->getMessage(),
             ], 500);
         }
     }
 
     /**
-     * Processa uma operaÃ§Ã£o individual (create, update, delete)
+     * Processa uma operação individual (create, update, delete)
      */
     private function processOperation(string $ModelClass, string $action, array $payload, string $storeName): array
     {
@@ -181,7 +181,7 @@ class OfflineSyncController extends Controller
             case 'create':
                 $localId = $payload['id'] ?? null;
                 
-                // Remover ID temporÃ¡rio e adicionar company_id
+                // Remover ID temporário e adicionar company_id
                 unset($payload['id']);
                 $payload['company_id'] = $companyId;
                 
@@ -225,11 +225,11 @@ class OfflineSyncController extends Controller
                 if (!$record) {
                     return [
                         'status'  => 'error',
-                        'message' => "Registro nÃ£o encontrado para update.",
+                        'message' => "Registro não encontrado para update.",
                     ];
                 }
 
-                // Remover campos que nÃ£o devem ser atualizados
+                // Remover campos que não devem ser atualizados
                 unset($payload['id'], $payload['uuid'], $payload['company_id']);
 
                 $record->update($payload);
@@ -269,7 +269,7 @@ class OfflineSyncController extends Controller
                 if (!$deleted) {
                     return [
                         'status'  => 'error',
-                        'message' => 'Registro nÃ£o encontrado para delete.',
+                        'message' => 'Registro não encontrado para delete.',
                     ];
                 }
                 
@@ -288,7 +288,7 @@ class OfflineSyncController extends Controller
             default:
                 return [
                     'status'  => 'error',
-                    'message' => "AÃ§Ã£o desconhecida: {$action}",
+                    'message' => "Ação desconhecida: {$action}",
                 ];
         }
     }

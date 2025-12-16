@@ -38,7 +38,7 @@ class FinanceReportController extends Controller
         $startDate = $request->input('start_date');
         $endDate   = $request->input('end_date');
 
-        // 🔥 Enviando companyId para filtrar tudo corretamente
+        // Enviando companyId para filtrar tudo corretamente
         $reportData = $this->service->generateReport(
             $startDate,
             $endDate,
