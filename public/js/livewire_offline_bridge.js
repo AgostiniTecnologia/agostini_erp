@@ -251,9 +251,11 @@
 
     // Tentar inicializar
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initBridge);
-    } else {
-        initBridge();
-    }
-
-})();
+        document.addEventListener('livewire:init', () => {
+            Livewire.hook('message.failed', () => {
+        if (!navigator.onLine) {
+            alert('Você está offline. Use o módulo offline para cadastro.');
+            }
+        });
+    });
+});

@@ -88,6 +88,19 @@ class Product extends Model
 
     // --- FIM RELAÇÕES ---
 
+    /**
+     * Define o relacionamento Muitos-para-Muitos com RawMaterial.
+     */
+    public function rawMaterials(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            RawMaterial::class, 
+            'product_raw_material', 
+            'product_id', 
+            'raw_material_id'
+        )->withPivot(['quantity', 'unit_of_measure'])
+        ->withTimestamps();
+    }
 
     protected static function booted(): void
     {

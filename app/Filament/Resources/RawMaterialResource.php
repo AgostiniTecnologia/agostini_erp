@@ -2,37 +2,36 @@
 
 namespace App\Filament\Resources;
 
-use App\Filament\Resources\ProductResource\Pages;
-use App\Filament\Resources\ProductResource\RelationManagers;
-use App\Models\Product;
+use App\Filament\Resources\RawMaterialResource\Pages;
+use App\Models\RawMaterial;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Filament\Forms\Components\Tabs;
 use Filament\Tables\Filters\TrashedFilter;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Illuminate\Validation\Rule;
 
-class ProductResource extends Resource
+class RawMaterialResource extends Resource
 {
-    protected static ?string $model = Product::class;
+    protected static ?string $model = RawMaterial::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-cube';
-    protected static ?string $modelLabel = 'Produto';
-    protected static ?string $pluralModelLabel = 'Produtos';
+    protected static ?string $modelLabel = 'Matéria Prima';
+    protected static ?string $pluralModelLabel = 'Matéria Prima';
     protected static ?string $navigationGroup = 'Cadastros';
     protected static ?int $navigationSort = 22;
 
     protected static ?string $recordTitleAttribute = 'name';
 
-    // ---------------- FORMULÁRIO ----------------
     public static function form(Form $form): Form
     {
         return $form
             ->schema([
-                Tabs::make('ProductTabs')
+                Tabs::make('RawTabs')
                     ->tabs([
                         Tabs\Tab::make('Informações Principais')
                             ->icon('heroicon-o-information-circle')
@@ -45,6 +44,7 @@ class ProductResource extends Resource
                                 Forms\Components\TextInput::make('sku')
                                     ->label('SKU')
                                     ->maxLength(255)
+                                    ->unique(table: RawMaterial::class, column: 'sku', ignoreRecord: true)
                                     ->columnSpan(1),
                                 Forms\Components\TextInput::make('stock')
                                     ->label('Estoque')
@@ -69,7 +69,7 @@ class ProductResource extends Resource
                                     ->columnSpanFull(),
                             ])->columns(2),
 
-                        Tabs\Tab::make('Custos e Preços')
+                        Tabs\Tab::make('Custos')
                             ->icon('heroicon-o-currency-dollar')
                             ->schema([
                                 Forms\Components\TextInput::make('standard_cost')
@@ -79,27 +79,11 @@ class ProductResource extends Resource
                                     ->maxValue(42949672.95)
                                     ->default(null)
                                     ->columnSpan(['default' => 2, 'lg' => 1]),
-                                Forms\Components\TextInput::make('sale_price')
-                                    ->label('Preço de Venda')
-                                    ->numeric()
-                                    ->prefix('R$')
-                                    ->maxValue(42949672.95)
-                                    ->default(null)
-                                    ->columnSpan(['default' => 2, 'lg' => 1]),
-                                Forms\Components\TextInput::make('minimum_sale_price')
-                                    ->label('Preço Mínimo de Venda')
-                                    ->numeric()
-                                    ->prefix('R$')
-                                    ->maxValue(42949672.95)
-                                    ->default(null)
-                                    ->helperText('Usado para validar descontos em pedidos de venda.')
-                                    ->columnSpan(2),
                             ])->columns(['default' => 1, 'lg' => 2]),
                     ])->columnSpanFull(),
             ]);
     }
 
-    // ---------------- TABELA ----------------
     public static function table(Table $table): Table
     {
         return $table
@@ -124,17 +108,7 @@ class ProductResource extends Resource
                 Tables\Columns\TextColumn::make('standard_cost')
                     ->label('Custo Padrão')
                     ->money('BRL')
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                Tables\Columns\TextColumn::make('sale_price')
-                    ->label('Preço Venda')
-                    ->money('BRL')
                     ->sortable(),
-                Tables\Columns\TextColumn::make('minimum_sale_price')
-                    ->label('Preço Mín. Venda')
-                    ->money('BRL')
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Criado em')
                     ->dateTime('d/m/Y H:i')
@@ -151,7 +125,9 @@ class ProductResource extends Resource
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
-            ->filters([TrashedFilter::make()])
+            ->filters([
+                TrashedFilter::make(),
+            ])
             ->actions([
                 Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),
@@ -168,29 +144,21 @@ class ProductResource extends Resource
             ->defaultSort('name', 'asc');
     }
 
-    // ---------------- RELAÇÕES ----------------
-    public static function getRelations(): array
-    {
-        return [
-            RelationManagers\RawMaterialsRelationManager::class, // Aba Matéria Prima
-            RelationManagers\ProductionStepsRelationManager::class,
-        ];
-    }
-
-    // ---------------- PÁGINAS ----------------
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListProducts::route('/'),
-            'create' => Pages\CreateProduct::route('/create'),
-            'edit' => Pages\EditProduct::route('/{record}/edit'),
+            'index' => Pages\ListRawMaterials::route('/'),
+            'create' => Pages\CreateRawMaterial::route('/create'),
+            'edit' => Pages\EditRawMaterial::route('/{record}/edit'),
         ];
     }
 
     public static function getEloquentQuery(): Builder
     {
         return parent::getEloquentQuery()
-            ->withoutGlobalScopes([SoftDeletingScope::class]);
+            ->withoutGlobalScopes([
+                SoftDeletingScope::class,
+            ]);
     }
 
     public static function getGloballySearchableAttributes(): array
