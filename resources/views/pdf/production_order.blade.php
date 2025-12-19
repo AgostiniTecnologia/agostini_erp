@@ -147,7 +147,7 @@
             <img src="images/logo-agostini-full_color-1-horizontal.png" alt="Agostini Tecnologia de Gestão">
         </div>
     </header>
-<div class="container">
+    <div class="container">
     <h1>Ordem de Produção: {{ $order->order_number }}</h1>
 
     {{-- Cabeçalho em formato de tabela com 6 colunas --}}
