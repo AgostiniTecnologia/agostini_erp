@@ -17,7 +17,7 @@
 <body>
     <header>
         <div>
-            <img src="images/logo-agostini-full_color-1-horizontal.png" alt="Agostini Tecnologia de Gestão">
+            <img src="images/logo-agostini-full_color-2.png" alt="Agostini Tecnologia de Gestão">
         </div>
     </header>
     <div class="header">
