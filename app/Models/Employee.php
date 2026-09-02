@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Auth;
 
 class Employee extends Model
 {
-    use HasFactory, HasUuids;
+    use HasFactory, HasUuids, SoftDeletes;
 
     protected $primaryKey = 'uuid';
     public $incrementing = false;

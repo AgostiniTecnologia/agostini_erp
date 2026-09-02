@@ -12,6 +12,7 @@ use Filament\Forms\Form;
 use Filament\Forms\Get; // Importar Get para o campo work_shift_id
 use Filament\Resources\Resource;
 use Filament\Tables;
+use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
@@ -109,9 +110,13 @@ class EmployeeResource extends Resource
                     ->boolean()
                     ->sortable()
             ])
+            ->filters([
+                TrashedFilter::make(),
+            ])
             ->actions([
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make(),
+                Tables\Actions\RestoreAction::make(),
             ])
             ->emptyStateHeading('Nenhum funcionário encontrado')
             ->emptyStateDescription('Crie um funcionário para começar.');
