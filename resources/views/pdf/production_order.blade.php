@@ -54,6 +54,23 @@
             table-layout: fixed;
             margin-bottom: 15px; /* Espaço extra após cada tabela de etapas */
         }
+        .measurements-table {
+            font-size: 8px;
+            margin-bottom: 8px;
+            table-layout: auto;
+        }
+        .measurements-title {
+            background-color: #f2f2f2;
+            font-size: 10px;
+            font-weight: bold;
+            margin: 10px 0 3px;
+            padding: 4px;
+        }
+        .sheet-size {
+            background-color: #eef6f8;
+            font-weight: bold;
+            text-align: center;
+        }
 
         th, td {
             border: 1px solid #ddd;
@@ -212,6 +229,72 @@
         </tbody>
     </table>
 
+    @if($order->items->isNotEmpty())
+        <h2 class="steps-title">Medidas dos Produtos</h2>
+        @foreach($order->items as $item)
+            @php
+                $product = $item->product;
+                $measurements = $product?->cardboard_measurements ?? [];
+                $profile = app(\App\Services\OperationalProfileResolver::class)->forCompany($order->company);
+                $displayValue = fn ($value, $suffix) => filled($value) ? str_replace('.', ',', (string) $value).$suffix : 'Não informado';
+            @endphp
+
+            <div class="measurements-title">Item {{ $loop->iteration }}: {{ $product->name ?? 'Produto não encontrado' }}</div>
+
+            @if($profile === \App\Enums\OperationalProfile::CardboardPackaging && $product)
+                @php
+                    $lengthTotal = \App\Support\CardboardMeasurements::lengthTotal($measurements);
+                    $widthTotal = \App\Support\CardboardMeasurements::widthTotal($measurements);
+                @endphp
+                <table class="measurements-table">
+                    <tr><th colspan="3">Medidas internas</th></tr>
+                    <tr><th>Comprimento interno</th><th>Largura interna</th><th>Altura interna</th></tr>
+                    <tr>
+                        <td>{{ $displayValue($measurements['internal_length'] ?? null, ' mm') }}</td>
+                        <td>{{ $displayValue($measurements['internal_width'] ?? null, ' mm') }}</td>
+                        <td>{{ $displayValue($measurements['internal_height'] ?? null, ' mm') }}</td>
+                    </tr>
+                </table>
+                <table class="measurements-table">
+                    <tr><th colspan="6">Composição do comprimento da chapa</th></tr>
+                    <tr><th>Aba esquerda</th><th>Altura esquerda</th><th>Comprimento</th><th>Altura direita</th><th>Aba direita</th><th>Total</th></tr>
+                    <tr>
+                        <td>{{ $displayValue($measurements['left_flap'] ?? null, ' mm') }}</td>
+                        <td>{{ $displayValue($measurements['left_height'] ?? null, ' mm') }}</td>
+                        <td>{{ $displayValue($measurements['sheet_length'] ?? null, ' mm') }}</td>
+                        <td>{{ $displayValue($measurements['right_height'] ?? null, ' mm') }}</td>
+                        <td>{{ $displayValue($measurements['right_flap'] ?? null, ' mm') }}</td>
+                        <td>{{ \App\Support\CardboardMeasurements::format($lengthTotal) }} mm</td>
+                    </tr>
+                </table>
+                <table class="measurements-table">
+                    <tr><th colspan="6">Composição da largura da chapa</th></tr>
+                    <tr><th>Aba superior</th><th>Altura superior</th><th>Largura</th><th>Altura inferior</th><th>Aba inferior</th><th>Total</th></tr>
+                    <tr>
+                        <td>{{ $displayValue($measurements['top_flap'] ?? null, ' mm') }}</td>
+                        <td>{{ $displayValue($measurements['top_height'] ?? null, ' mm') }}</td>
+                        <td>{{ $displayValue($measurements['sheet_width'] ?? null, ' mm') }}</td>
+                        <td>{{ $displayValue($measurements['bottom_height'] ?? null, ' mm') }}</td>
+                        <td>{{ $displayValue($measurements['bottom_flap'] ?? null, ' mm') }}</td>
+                        <td>{{ \App\Support\CardboardMeasurements::format($widthTotal) }} mm</td>
+                    </tr>
+                    <tr><td colspan="6" class="sheet-size">Tamanho da chapa: {{ \App\Support\CardboardMeasurements::format($lengthTotal) }} × {{ \App\Support\CardboardMeasurements::format($widthTotal) }} mm</td></tr>
+                </table>
+            @else
+                <table class="measurements-table">
+                    <tr><th>Peso líquido</th><th>Peso bruto</th><th>Comprimento</th><th>Largura</th><th>Altura</th></tr>
+                    <tr>
+                        <td>{{ $displayValue($product?->weight_net, ' kg') }}</td>
+                        <td>{{ $displayValue($product?->weight, ' kg') }}</td>
+                        <td>{{ $displayValue($product?->length, ' m') }}</td>
+                        <td>{{ $displayValue($product?->width, ' m') }}</td>
+                        <td>{{ $displayValue($product?->height, ' m') }}</td>
+                    </tr>
+                </table>
+            @endif
+        @endforeach
+    @endif
+
     {{-- Seção para as Etapas de Produção POR ITEM --}}
     <h2 class="steps-title">Etapas de Produção por Item</h2>
 
@@ -246,11 +329,11 @@
                             @endphp
                             {!! DNS2D::getBarcodeHTML($qrData, 'QRCODE', 1.8, 1.8) !!}
 
-                            {{--@if (env('APP_DEBUG', false))
+                           {{-- @if (env('APP_DEBUG', false))
                                 <div class="debug_code">
                                     {{ \Illuminate\Support\Facades\Crypt::encryptString($qrData) }}
                                 </div>
-                            @endif--}}
+                            @endif --}}
                         </td>
                         <td class="order-cell">{{ $loop->parent->iteration }}.{{$loop->iteration}}</td>
                         <td class="step-cell">{{ $step->name ?? 'N/A' }}</td>

@@ -241,6 +241,14 @@
             }
         });
 
+        // Sincronizar também o estado inicial. Os eventos acima só são
+        // disparados quando a conexão muda depois que a página foi aberta.
+        try {
+            Livewire.dispatch('connection-status-changed', { online: navigator.onLine });
+        } catch (error) {
+            console.error('[LivewireBridge] Erro ao informar status inicial:', error);
+        }
+
         console.log('[LivewireBridge] Inicializado com sucesso');
     }
 
@@ -249,13 +257,23 @@
         init: initBridge
     };
 
-    // Tentar inicializar
-    if (document.readyState === 'loading') {
-        document.addEventListener('livewire:init', () => {
+    function bootBridge() {
+        initBridge();
+
+        if (typeof Livewire !== 'undefined') {
             Livewire.hook('message.failed', () => {
-        if (!navigator.onLine) {
-            alert('Você está offline. Use o módulo offline para cadastro.');
-            }
-        });
-    });
-});
+                if (!navigator.onLine) {
+                    alert('Você está offline. Use o módulo offline para cadastro.');
+                }
+            });
+        }
+    }
+
+    // Scripts do tipo module executam após o HTML ser processado. Caso o
+    // Livewire ainda não esteja disponível, initBridge fará novas tentativas.
+    if (document.readyState === 'loading') {
+        document.addEventListener('livewire:init', bootBridge, { once: true });
+    } else {
+        bootBridge();
+    }
+})();

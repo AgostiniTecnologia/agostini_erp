@@ -2,44 +2,45 @@
 
 namespace App\Filament\Resources;
 
+use App\Enums\OperationalProfile;
 use App\Filament\Resources\CompanyResource\Pages;
 use App\Models\Company;
 // use Filament\Forms\Components\Grid; // Não será mais usado diretamente no schema principal
+use Cheesegrits\FilamentGoogleMaps\Fields\Map;
 use Filament\Forms\Components\Actions\Action;
 use Filament\Forms\Components\Group;
-use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Select;
-use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\Tabs;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
+use Filament\Forms\Get;
 use Filament\Forms\Set;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Tables;
+// Novas importações baseadas no ClientResource
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
-
-// Novas importações baseadas no ClientResource
-use Filament\Forms\Components\Tabs;
-use Filament\Forms\Get;
-use Filament\Notifications\Notification;
-use Livewire\Component as Livewire; // Garanta que o alias Livewire está correto
-use Cheesegrits\FilamentGoogleMaps\Fields\Map;
+use Illuminate\Database\Eloquent\SoftDeletingScope; // Garanta que o alias Livewire está correto
 use Illuminate\Validation\Rule;
+use Livewire\Component as Livewire;
 
 class CompanyResource extends Resource
 {
     protected static ?string $model = Company::class;
 
     protected static ?string $modelLabel = 'Empresa';
+
     protected static ?string $pluralModelLabel = 'Empresas';
 
     protected static ?string $navigationIcon = 'heroicon-o-building-office-2';
-    protected static ?string $navigationGroup = 'Sistema';
-    protected static ?string $navigationLabel = 'Empresas';
-    protected static ?int $navigationSort = 11;
 
+    protected static ?string $navigationGroup = 'Sistema';
+
+    protected static ?string $navigationLabel = 'Empresas';
+
+    protected static ?int $navigationSort = 11;
 
     public static function form(Form $form): Form
     {
@@ -72,6 +73,7 @@ class CompanyResource extends Resource
                                                         ->body('Por favor, insira um CNPJ para consulta.')
                                                         ->warning()
                                                         ->send();
+
                                                     return;
                                                 }
                                                 $cleanedCnpj = preg_replace('/[^0-9]/', '', $cnpj);
@@ -95,8 +97,11 @@ class CompanyResource extends Resource
                                     ->maxLength(20)
                                     ->rule(function (Get $get, $record) {
                                         $value = $get('state_registration');
-                                        if (empty($value)) return null;
+                                        if (empty($value)) {
+                                            return null;
+                                        }
                                         $companyId = $record?->company_id ?? auth()->user()?->company_id;
+
                                         return Rule::unique('clients', 'state_registration')
                                             ->where('company_id', $companyId)
                                             ->ignore($record?->uuid, 'uuid');
@@ -105,7 +110,17 @@ class CompanyResource extends Resource
                                 TextInput::make('municipal_registration')
                                     ->label('Inscrição Municipal')
                                     ->maxLength(20)
-                                    ->columnSpan(['default' => 3, 'lg' => 4])
+                                    ->columnSpan(['default' => 3, 'lg' => 4]),
+
+                                Select::make('operational_profile')
+                                    ->label('Perfil operacional')
+                                    ->options(OperationalProfile::class)
+                                    ->default(OperationalProfile::Standard->value)
+                                    ->required()
+                                    ->native(false)
+                                    ->searchable()
+                                    ->helperText('Define o segmento da empresa e o modelo de configuração utilizado pelo sistema.')
+                                    ->columnSpan(['default' => 3, 'lg' => 4]),
                             ]),
 
                         Tabs\Tab::make('Endereço e Localização')
@@ -131,6 +146,7 @@ class CompanyResource extends Resource
                                                             ->body('Por favor, insira um CEP para consulta.')
                                                             ->warning()
                                                             ->send();
+
                                                         return;
                                                     }
                                                     $cleanedCep = preg_replace('/[^0-9]/', '', $cep);
@@ -140,6 +156,7 @@ class CompanyResource extends Resource
                                                             ->body('O CEP deve conter 8 dígitos.')
                                                             ->warning()
                                                             ->send();
+
                                                         return;
                                                     }
                                                     Notification::make()
@@ -149,7 +166,7 @@ class CompanyResource extends Resource
                                                     $livewire->dispatch('fetchCompanyCepData', cep: $cleanedCep);
                                                 })
                                                 ->color('gray')
-                                        // ->loadingIndicator() // Removed
+                                            // ->loadingIndicator() // Removed
                                         )
                                         ->placeholder('12345-678')
                                         ->columnSpan(1),
@@ -195,26 +212,26 @@ class CompanyResource extends Resource
                                         ->height('400px')
                                         ->reactive()
                                         ->live(onBlur: true)
-                                        ->afterStateUpdated(function(Get $get, Set $set){
-                                            $set('latitude', $get('map_visualization')["lat"]);
-                                            $set('longitude', $get('map_visualization')["lng"]);
+                                        ->afterStateUpdated(function (Get $get, Set $set) {
+                                            $set('latitude', $get('map_visualization')['lat']);
+                                            $set('longitude', $get('map_visualization')['lng']);
                                         })
                                         ->draggable(true)
                                         ->clickable(false)
                                         ->geolocate(false)
                                         ->defaultLocation(fn (Get $get): array => [
-                                            (float)($get('latitude') ?? -23.550520),
-                                            (float)($get('longitude') ?? -46.633308)
+                                            (float) ($get('latitude') ?? -23.550520),
+                                            (float) ($get('longitude') ?? -46.633308),
                                         ])
                                         ->defaultZoom(fn (Get $get): int => ($get('latitude') && $get('longitude')) ? 15 : 5)
                                         ->mapControls([
-                                            'mapTypeControl'    => false,
-                                            'scaleControl'      => false,
+                                            'mapTypeControl' => false,
+                                            'scaleControl' => false,
                                             'streetViewControl' => false,
-                                            'rotateControl'     => false,
+                                            'rotateControl' => false,
                                             'fullscreenControl' => false,
-                                            'searchBoxControl'  => false,
-                                            'zoomControl'       => false,
+                                            'searchBoxControl' => false,
+                                            'zoomControl' => false,
                                         ]),
                                 ])->columns(2),
                             ])->columns(2),
@@ -248,6 +265,7 @@ class CompanyResource extends Resource
                                 substr($cleanedState, 12, 2)
                             );
                         }
+
                         return $state;
                     }),
                 TextColumn::make('address_city')
@@ -264,13 +282,16 @@ class CompanyResource extends Resource
                     ->label('Telefone')
                     ->searchable()
                     ->formatStateUsing(function (?string $state): string {
-                        if (empty($state)) return '';
+                        if (empty($state)) {
+                            return '';
+                        }
                         $cleaned = preg_replace('/[^0-9]/', '', $state);
                         if (strlen($cleaned) == 11) {
                             return sprintf('(%s) %s-%s', substr($cleaned, 0, 2), substr($cleaned, 2, 5), substr($cleaned, 7, 4));
                         } elseif (strlen($cleaned) == 10) {
                             return sprintf('(%s) %s-%s', substr($cleaned, 0, 2), substr($cleaned, 2, 4), substr($cleaned, 6, 4));
                         }
+
                         return $state;
                     })
                     ->toggleable(isToggledHiddenByDefault: true),
@@ -334,4 +355,3 @@ class CompanyResource extends Resource
             ]);
     }
 }
-

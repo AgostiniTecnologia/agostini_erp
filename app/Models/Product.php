@@ -3,24 +3,26 @@
 namespace App\Models;
 
 use App\Models\Scopes\TenantScope;
+use App\Services\OperationalProfileResolver;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 // Precisa importar BelongsToMany aqui!
 use Illuminate\Database\Eloquent\Relations\BelongsTo; // <-- Importar BelongsTo
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Support\Facades\Auth;
 // Importar BelongsToMany
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-
+use Illuminate\Support\Facades\Auth;
 
 class Product extends Model
 {
     use HasFactory, HasUuids, SoftDeletes;
 
     protected $primaryKey = 'uuid';
+
     public $incrementing = false;
+
     protected $keyType = 'string';
 
     /**
@@ -37,7 +39,8 @@ class Product extends Model
         'standard_cost',
         'sale_price',
         'minimum_sale_price',
-        'stock'
+        'stock',
+        'cardboard_measurements',
     ];
 
     /**
@@ -49,6 +52,7 @@ class Product extends Model
         'standard_cost' => 'decimal:2', // Manter casts existentes
         'sale_price' => 'decimal:2',
         'minimum_sale_price' => 'decimal:2',
+        'cardboard_measurements' => 'array',
     ];
 
     // --- RELAÇÕES ---
@@ -85,7 +89,6 @@ class Product extends Model
             ->orderBy('step_order');  // <-- Opcional: Ordena as etapas
     }
 
-
     // --- FIM RELAÇÕES ---
 
     /**
@@ -94,12 +97,12 @@ class Product extends Model
     public function rawMaterials(): BelongsToMany
     {
         return $this->belongsToMany(
-            RawMaterial::class, 
-            'product_raw_material', 
-            'product_id', 
+            RawMaterial::class,
+            'product_raw_material',
+            'product_id',
             'raw_material_id'
         )->withPivot(['quantity', 'unit_of_measure'])
-        ->withTimestamps();
+            ->withTimestamps();
     }
 
     protected static function booted(): void
@@ -111,6 +114,18 @@ class Product extends Model
                 if (Auth::check() && Auth::user()->company_id) {
                     $model->company_id = Auth::user()->company_id;
                 }
+            }
+
+            if (Auth::check() && ! app(OperationalProfileResolver::class)->isCardboardPackaging()) {
+                unset($model->cardboard_measurements);
+            }
+        });
+
+        static::updating(function (Product $product) {
+            if (Auth::check()
+                && $product->isDirty('cardboard_measurements')
+                && ! app(OperationalProfileResolver::class)->isCardboardPackaging()) {
+                $product->cardboard_measurements = $product->getOriginal('cardboard_measurements');
             }
         });
     }

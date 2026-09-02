@@ -3,10 +3,10 @@
 namespace App\Policies;
 
 use App\Models\User;
-use App\Models\PricingTable;
+use App\Models\RawMaterial;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
-class PricingTablePolicy
+class RawMaterialPolicy
 {
     use HandlesAuthorization;
 
@@ -15,15 +15,15 @@ class PricingTablePolicy
      */
     public function viewAny(User $user): bool
     {
-        return $user->can('view_any_pricing::table');
+        return $user->can('view_any_raw::material');
     }
 
     /**
      * Determine whether the user can view the model.
      */
-    public function view(User $user, PricingTable $pricingTable): bool
+    public function view(User $user, RawMaterial $rawMaterial): bool
     {
-        return $user->can('view_pricing::table');
+        return $user->can('view_raw::material');
     }
 
     /**
@@ -31,23 +31,23 @@ class PricingTablePolicy
      */
     public function create(User $user): bool
     {
-        return $user->can('create_pricing::table');
+        return $user->can('create_raw::material');
     }
 
     /**
      * Determine whether the user can update the model.
      */
-    public function update(User $user, PricingTable $pricingTable): bool
+    public function update(User $user, RawMaterial $rawMaterial): bool
     {
-        return $user->can('update_pricing::table');
+        return $user->can('update_raw::material');
     }
 
     /**
      * Determine whether the user can delete the model.
      */
-    public function delete(User $user, PricingTable $pricingTable): bool
+    public function delete(User $user, RawMaterial $rawMaterial): bool
     {
-        return $user->can('delete_pricing::table');
+        return $user->can('delete_raw::material');
     }
 
     /**
@@ -55,15 +55,15 @@ class PricingTablePolicy
      */
     public function deleteAny(User $user): bool
     {
-        return $user->can('delete_any_pricing::table');
+        return $user->can('delete_any_raw::material');
     }
 
     /**
      * Determine whether the user can permanently delete.
      */
-    public function forceDelete(User $user, PricingTable $pricingTable): bool
+    public function forceDelete(User $user, RawMaterial $rawMaterial): bool
     {
-        return $user->can('force_delete_pricing::table');
+        return $user->can('force_delete_raw::material');
     }
 
     /**
@@ -71,15 +71,15 @@ class PricingTablePolicy
      */
     public function forceDeleteAny(User $user): bool
     {
-        return $user->can('force_delete_any_pricing::table');
+        return $user->can('force_delete_any_raw::material');
     }
 
     /**
      * Determine whether the user can restore.
      */
-    public function restore(User $user, PricingTable $pricingTable): bool
+    public function restore(User $user, RawMaterial $rawMaterial): bool
     {
-        return $user->can('restore_pricing::table');
+        return $user->can('restore_raw::material');
     }
 
     /**
@@ -87,15 +87,15 @@ class PricingTablePolicy
      */
     public function restoreAny(User $user): bool
     {
-        return $user->can('restore_any_pricing::table');
+        return $user->can('restore_any_raw::material');
     }
 
     /**
      * Determine whether the user can replicate.
      */
-    public function replicate(User $user, PricingTable $pricingTable): bool
+    public function replicate(User $user, RawMaterial $rawMaterial): bool
     {
-        return $user->can('replicate_pricing::table');
+        return $user->can('replicate_raw::material');
     }
 
     /**
@@ -103,6 +103,6 @@ class PricingTablePolicy
      */
     public function reorder(User $user): bool
     {
-        return $user->can('reorder_pricing::table');
+        return $user->can('reorder_raw::material');
     }
 }

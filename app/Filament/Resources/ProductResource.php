@@ -2,27 +2,33 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Forms\CardboardPackagingMeasurements;
 use App\Filament\Resources\ProductResource\Pages;
 use App\Filament\Resources\ProductResource\RelationManagers;
 use App\Models\Product;
+use App\Services\OperationalProfileResolver;
 use Filament\Forms;
+use Filament\Forms\Components\Tabs;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
+use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
-use Filament\Forms\Components\Tabs;
-use Filament\Tables\Filters\TrashedFilter;
 
 class ProductResource extends Resource
 {
     protected static ?string $model = Product::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-cube';
+
     protected static ?string $modelLabel = 'Produto';
+
     protected static ?string $pluralModelLabel = 'Produtos';
+
     protected static ?string $navigationGroup = 'Cadastros';
+
     protected static ?int $navigationSort = 22;
 
     protected static ?string $recordTitleAttribute = 'name';
@@ -95,7 +101,52 @@ class ProductResource extends Resource
                                     ->helperText('Usado para validar descontos em pedidos de venda.')
                                     ->columnSpan(2),
                             ])->columns(['default' => 1, 'lg' => 2]),
+
+                        Tabs\Tab::make('Medidas e Peso')
+                            ->icon('heroicon-o-scale')
+                            ->hidden(fn (): bool => app(OperationalProfileResolver::class)->isCardboardPackaging())
+                            ->schema([
+                                Forms\Components\TextInput::make('weight_net')
+                                    ->label('Peso Liquido (kg)')
+                                    ->numeric()
+                                    ->maxValue(42949672.95)
+                                    ->default(null)
+                                    ->columnSpan(['default' => 2, 'lg' => 1]),
+
+                                Forms\Components\TextInput::make('weight')
+                                    ->label('Peso Bruto (kg)')
+                                    ->numeric()
+                                    ->maxValue(42949672.95)
+                                    ->default(null)
+                                    ->columnSpan(['default' => 2, 'lg' => 1]),
+
+                                Forms\Components\TextInput::make('length')
+                                    ->label('Comprimento (m)')
+                                    ->numeric()
+                                    ->maxValue(42949672.95)
+                                    ->default(null)
+                                    ->columnSpan(['default' => 2, 'lg' => 1]),
+                                Forms\Components\TextInput::make('width')
+                                    ->label('Largura (m)')
+                                    ->numeric()
+                                    ->maxValue(42949672.95)
+                                    ->default(null)
+                                    ->columnSpan(['default' => 2, 'lg' => 1]),
+                                Forms\Components\TextInput::make('height')
+                                    ->label('Altura (m)')
+                                    ->numeric()
+                                    ->maxValue(42949672.95)
+                                    ->default(null)
+                                    ->columnSpan(['default' => 2, 'lg' => 1]),
+                            ])->columns(['default' => 1, 'lg' => 4]),
+
+                        Tabs\Tab::make('Medidas e Peso')
+                            ->icon('heroicon-o-scale')
+                            ->visible(fn (): bool => app(OperationalProfileResolver::class)->isCardboardPackaging())
+                            ->schema(CardboardPackagingMeasurements::schema()),
+
                     ])->columnSpanFull(),
+
             ]);
     }
 

@@ -81,8 +81,8 @@
                                         <span class="hidden ml-1 sm:inline"> - {{ $currentTask->lastPauseReasonDetail->name }}</span>
                                     @endif
                                  </span>
-                                <x-filament::button 
-                                    wire:click="resumeTask" 
+                                <x-filament::button
+                                    wire:click="resumeTask"
                                     class="bg-green-600 hover:bg-green-700 text-black text-sm px-4 py-2 rounded-lg shadow-md transition-all"
                                     color="warning"
                                 >
@@ -186,14 +186,14 @@
            {{-- <div class="p-4 bg-gray-100 rounded-lg mt-4">
                     <h3 class="text-sm font-semibold mb-2 text-gray-700">Inserir QR Code manualmente</h3>
                     <div class="flex gap-2">
-                        <input 
-                            type="text" 
-                            wire:model.defer="debugScannedQrCode" 
-                            placeholder="Cole aqui o código criptografado do QR Code..." 
+                        <input
+                            type="text"
+                            wire:model.defer="debugScannedQrCode"
+                            placeholder="Cole aqui o código criptografado do QR Code..."
                             class="flex-1 border rounded px-3 py-2 text-sm"
                         >
-                        <button 
-                            wire:click="debugQrCode" 
+                        <button
+                            wire:click="debugQrCode"
                             class="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2 rounded"
                         >
                             📋 Colar / Processar
@@ -387,11 +387,11 @@
                 debounceTimer = setTimeout(() => {
                     console.log(`Debounced: Processando QR Code = ${decodedText}`);
                     isProcessingScan = true;
-                    
+
                     // Disparamos ambos os eventos e deixamos o Alpine.js decidir o que fazer
                     window.dispatchEvent(new CustomEvent('qr-code-scanned', { detail: { decodedText: decodedText } }));
                     window.dispatchEvent(new CustomEvent('scan-success', { detail: { decodedText: decodedText } }));
-                    
+
                     setTimeout(() => {
                         isProcessingScan = false;
                     }, 1000); // Pequeno delay para evitar re-scans imediatos

@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\OperationalProfile;
 use App\Models\Company;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
@@ -41,6 +42,7 @@ class CompanyFactory extends Factory
             'latitude' => $this->faker->latitude,
             'longitude' => $this->faker->longitude,
             'telephone' => $this->faker->numerify('###########'),
+            'operational_profile' => OperationalProfile::Standard,
         ];
     }
 

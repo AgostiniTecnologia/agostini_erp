@@ -6,7 +6,6 @@ use App\Filament\Resources\ProductResource;
 use App\Livewire\Traits\LivewireOfflineData;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\CreateRecord;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class CreateProduct extends CreateRecord
@@ -14,8 +13,9 @@ class CreateProduct extends CreateRecord
     use LivewireOfflineData;
 
     protected static string $resource = ProductResource::class;
-    
+
     public string $offlineStoreName = 'products';
+
     public bool $isOffline = false;
 
     public function mount(): void
@@ -29,7 +29,7 @@ class CreateProduct extends CreateRecord
      */
     protected function beforeCreate(): void
     {
-        if (!$this->checkOnlineStatus()) {
+        if (! $this->checkOnlineStatus()) {
             $this->handleOfflineCreate();
         }
     }
@@ -44,9 +44,9 @@ class CreateProduct extends CreateRecord
                 storeName: 'products',
                 item: $this->record->toArray()
             );
-            
+
             Log::info('Produto criado e cacheado offline', [
-                'product_id' => $this->record->id
+                'product_id' => $this->record->id,
             ]);
         }
     }
@@ -57,27 +57,27 @@ class CreateProduct extends CreateRecord
     protected function handleOfflineCreate(): void
     {
         $data = $this->form->getState();
-        
+
         // Adicionar company_id
         $data['company_id'] = auth()->user()->company_id;
-        
+
         // Salvar offline
         $tempId = $this->saveOfflineRecord($data, 'create');
-        
+
         Log::info('Produto salvo offline', [
             'temp_id' => $tempId,
-            'data' => $data
+            'data' => $data,
         ]);
-        
+
         Notification::make()
             ->title('Produto salvo offline')
             ->body('Será sincronizado automaticamente quando reconectar.')
             ->success()
             ->send();
-        
+
         // Redirecionar para lista
         $this->redirect(static::getResource()::getUrl('index'));
-        
+
         // Cancelar criação normal
         $this->halt();
     }
@@ -87,11 +87,6 @@ class CreateProduct extends CreateRecord
      */
     protected function checkOnlineStatus(): bool
     {
-        try {
-            $response = Http::timeout(2)->head(config('app.url'));
-            return $response->successful();
-        } catch (\Exception $e) {
-            return false;
-        }
+        return ! $this->isOffline;
     }
 }

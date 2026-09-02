@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\OperationalProfile;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -13,7 +14,9 @@ class Company extends Model
     use HasFactory, HasUuids, SoftDeletes;
 
     protected $primaryKey = 'uuid';
+
     public $incrementing = false;
+
     protected $keyType = 'string';
 
     /**
@@ -33,13 +36,14 @@ class Company extends Model
         'latitude',
         'longitude',
         'telephone',
+        'operational_profile',
     ];
 
     /**
      * Conversões de tipo para atributos.
      */
     protected $casts = [
-        // Nenhum cast necessário por enquanto
+        'operational_profile' => OperationalProfile::class,
     ];
 
     /**

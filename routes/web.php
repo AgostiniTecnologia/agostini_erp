@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\DashboardProductionPdfController;
 use App\Http\Controllers\FinancialReportPdfController;
 use App\Http\Controllers\ProductionOrderPdfController;
+use App\Http\Controllers\ProductTechnicalSheetPdfController;
 use App\Http\Controllers\TimeClockController;
 use App\Http\Controllers\VisitWithoutOrderPdfController;
 use App\Http\Controllers\PricingTablePdfController;
@@ -14,6 +15,9 @@ use App\Http\Controllers\Api\TimeClockReportController;
 Route::redirect('/', '/app');
 
 Route::middleware(['auth'])->group(function () {
+    Route::get('/products/{uuid}/technical-sheet/pdf', ProductTechnicalSheetPdfController::class)
+        ->name('products.technical-sheet.pdf');
+
     Route::get('/production-orders/{uuid}/pdf', [ProductionOrderPdfController::class, 'generatePdf'])
         ->name('production-orders.pdf');
 

@@ -3,27 +3,20 @@
 namespace App\Providers\Filament;
 
 use App\Filament\Pages\Auth\Login;
-use App\Filament\Pages\DashboardProduction;
-use App\Filament\Pages\HomePage;
-use App\Filament\Widgets\UserTaskWidget;
-use BezhanSalleh\FilamentShield\FilamentShieldPlugin;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
-use Filament\Pages;
 use Filament\Panel;
-use Filament\Support\Facades\FilamentView;
-use Illuminate\Support\Facades\Blade;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
 use Filament\Support\Enums\MaxWidth;
-use Filament\Widgets;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
+use Illuminate\Support\Facades\Blade;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 
 class AppPanelProvider extends PanelProvider
@@ -55,7 +48,7 @@ class AppPanelProvider extends PanelProvider
                     ->gridColumns([
                         'default' => 1,
                         'sm' => 2,
-                        'lg' => 3
+                        'lg' => 3,
                     ])
                     ->sectionColumnSpan(1)
                     ->checkboxListColumns([
@@ -81,13 +74,13 @@ class AppPanelProvider extends PanelProvider
             ])
             ->renderHook(
                 'panels::head.end',
-                fn () => Blade::render('@include(\'pwa.serviceworker\')'),
+                fn () => Blade::render('@include(\'pwa.serviceworker\') @include(\'errors.livewire-modal-styles\')'),
             )
             ->renderHook(
                 'panels::scripts.end',
-                fn () => Blade::render('<script type="module" src="' . asset('js/offline_data.js') . '"></script>
-                                       <script type="module" src="' . asset('js/livewire_offline_bridge.js') . '"></script>
-                                       <script type="module" src="' . asset('js/sync_manager.js') . '"></script>'),
+                fn () => Blade::render('<script type="module" src="'.asset('js/offline_data.js').'"></script>
+                                       <script type="module" src="'.asset('js/livewire_offline_bridge.js').'"></script>
+                                       <script type="module" src="'.asset('js/sync_manager.js').'"></script>'),
             )
             ->authMiddleware([
                 Authenticate::class,
