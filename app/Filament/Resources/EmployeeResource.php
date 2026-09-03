@@ -118,6 +118,13 @@ class EmployeeResource extends Resource
                 Tables\Actions\DeleteAction::make(),
                 Tables\Actions\RestoreAction::make(),
             ])
+            ->bulkActions([
+                Tables\Actions\BulkActionGroup::make([
+                    Tables\Actions\DeleteBulkAction::make(),
+                    Tables\Actions\ForceDeleteBulkAction::make(),
+                    Tables\Actions\RestoreBulkAction::make(),
+                ]),
+            ])
             ->emptyStateHeading('Nenhum funcionário encontrado')
             ->emptyStateDescription('Crie um funcionário para começar.');
     }

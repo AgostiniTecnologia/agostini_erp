@@ -247,8 +247,10 @@ class SalesOrder extends Model
     public function calculateAndSaveCommission(): void
     {
         // 1. Buscar a meta de venda do vendedor para o mês do pedido
+        $orderDate = Carbon::parse($this->order_date);
         $goal = SalesGoal::where('user_id', $this->user_id)
-            ->whereRaw('DATE_FORMAT(period, "%Y-%m") = ?', [Carbon::parse($this->order_date)->format('Y-m')])
+            ->whereYear('period', $orderDate->year)
+            ->whereMonth('period', $orderDate->month)
             ->first();
 
         $commissionAmount = 0.00;

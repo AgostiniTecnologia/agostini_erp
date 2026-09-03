@@ -7,6 +7,7 @@ use App\Models\ProductionStep;
 use App\Models\WorkSlot;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 
 class ProductionProcessSeeder extends Seeder
 {
@@ -43,7 +44,10 @@ class ProductionProcessSeeder extends Seeder
                 $attachData = [];                 foreach ($stepsToAttach as $step) {
                                         $attachData[$step->uuid] = ['step_order' => $order++];
                 }
-                                $product->productionSteps()->attach($attachData);
+                                DB::transaction(function () use ($product, $attachData): void {
+                                    $product->productionSteps()->detach();
+                                    $product->productionSteps()->attach($attachData);
+                                });
             }
             $this->command->info('Etapas vinculadas aos Produtos.');
         } else {
@@ -59,7 +63,7 @@ class ProductionProcessSeeder extends Seeder
                     continue;
                 }
                                 $slotsToAttach = $slots->random(rand(1, min(3, $slots->count())));
-                                $step->workSlots()->attach($slotsToAttach->pluck('uuid')->all());
+                                $step->workSlots()->sync($slotsToAttach->pluck('uuid')->all());
             }
             $this->command->info('Slots vinculados às Etapas.');
         } else {

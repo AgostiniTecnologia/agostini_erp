@@ -41,10 +41,10 @@
             </div>
             <div @if($viewMode !== 'list') class="hidden" @endif>
                 {{-- Modo Lista --}}
-                @if(!empty($visitsForMap))
+                @if(!empty($visitsForList))
                     <div class="p-2 max-h-[297px] overflow-y-auto"> {{-- Adicionado max-height e overflow --}}
                         <ul class="divide-y divide-gray-200 dark:divide-gray-700">
-                            @foreach($visitsForMap as $visit)
+                            @foreach($visitsForList as $visit)
                                 @php
                                     $markerColor = "gray";
                                     switch($visit['marker_category']){
@@ -90,8 +90,7 @@
                         </ul>
                     </div>
                 @else
-                    <p class="text-center text-gray-500 dark:text-gray-400 p-4">Nenhuma visita agendada com localização
-                        definida para exibir na lista.</p>
+                    <p class="text-center text-gray-500 dark:text-gray-400 p-4">Nenhuma visita agendada para exibir na lista.</p>
                 @endif
             </div>
         </div>

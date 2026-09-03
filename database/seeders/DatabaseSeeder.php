@@ -8,6 +8,7 @@ use App\Models\Role;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Hash;
 
 class DatabaseSeeder extends Seeder
 {
@@ -40,47 +41,26 @@ class DatabaseSeeder extends Seeder
         $company = Company::first();
         $company2 = Company::skip(1)->first();
 
-        User::factory()->create([
-            'company_id' => $company->uuid,
-            'name' => 'Super Admin User',
-            'username' => 'root',
-            'is_active' => true,
-        ])->assignRole($roleSuperAdmin);
+        $createUser = function (Company $userCompany, string $name, string $username, Role $role): void {
+            $user = User::firstOrCreate(
+                ['username' => $username],
+                [
+                    'company_id' => $userCompany->uuid,
+                    'name' => $name,
+                    'password' => Hash::make('password'),
+                    'is_active' => true,
+                ],
+            );
 
-        User::factory()->create([
-            'company_id' => $company->uuid,
-            'name' => 'Gerente',
-            'username' => 'gerente',
-            'is_active' => true,
-        ])->assignRole($roleGerente);
+            $user->assignRole($role);
+        };
 
-        User::factory()->create([
-            'company_id' => $company->uuid,
-            'name' => 'Usuário Vendedor',
-            'username' => 'vendedor',
-            'is_active' => true,
-        ])->assignRole($roleVendedor);
-
-        User::factory()->create([
-            'company_id' => $company->uuid,
-            'name' => 'Usuario Produção',
-            'username' => 'producao',
-            'is_active' => true,
-        ])->assignRole([$roleProducao]);
-
-        User::factory()->create([
-            'company_id' => $company->uuid,
-            'name' => 'Usuario Motorista',
-            'username' => 'motorista',
-            'is_active' => true,
-        ])->assignRole($roleMotorista);
-
-        User::factory()->create([
-            'company_id' => $company2->uuid,
-            'name' => 'Usuario de outra Empresa',
-            'username' => 'outro',
-            'is_active' => true,
-        ])->assignRole($roleMotorista);
+        $createUser($company, 'Super Admin User', 'root', $roleSuperAdmin);
+        $createUser($company, 'Gerente', 'gerente', $roleGerente);
+        $createUser($company, 'Usuário Vendedor', 'vendedor', $roleVendedor);
+        $createUser($company, 'Usuario Produção', 'producao', $roleProducao);
+        $createUser($company, 'Usuario Motorista', 'motorista', $roleMotorista);
+        $createUser($company2, 'Usuario de outra Empresa', 'outro', $roleMotorista);
 
         $this->call([
             PauseReasonSeeder::class,

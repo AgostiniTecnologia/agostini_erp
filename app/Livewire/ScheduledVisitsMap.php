@@ -10,6 +10,7 @@ use Carbon\Carbon;
 class ScheduledVisitsMap extends Component
 {
     public array $visitsForMap = [];
+    public array $visitsForList = [];
     public ?string $googleMapsApiKey;
     public string $viewMode = 'map';
 
@@ -30,18 +31,14 @@ class ScheduledVisitsMap extends Component
         $today = Carbon::today();
         $sevenDaysFromNow = $today->copy()->addDays(7);
 
-        $visits = SalesVisit::with([
-            'client' => function ($query) {
-                $query->whereNotNull('latitude')->whereNotNull('longitude');
-            }
-        ])
+        $visits = SalesVisit::with('client')
             ->where('assigned_to_user_id', $user->uuid)
             ->whereIn('status', [SalesVisit::STATUS_SCHEDULED, SalesVisit::STATUS_IN_PROGRESS])
             ->orderBy('scheduled_at', 'asc')
             ->get();
 
-        $this->visitsForMap = $visits->filter(function ($visit) {
-            return $visit->client && $visit->client->latitude && $visit->client->longitude;
+        $this->visitsForList = $visits->filter(function ($visit) {
+            return $visit->client;
         })->map(function (SalesVisit $visit) use ($today, $sevenDaysFromNow){
             $scheduledAt = Carbon::parse($visit->scheduled_at);
             $markerCategory = 'default';
@@ -68,14 +65,19 @@ class ScheduledVisitsMap extends Component
                     $visit->client->address_state,
                 ]))),
                 'scheduled_at_formatted' => $scheduledAt->format('d/m/Y H:i'),
-                'latitude' => (float) $visit->client->latitude,
-                'longitude' => (float) $visit->client->longitude,
+                'latitude' => $visit->client->latitude !== null ? (float) $visit->client->latitude : null,
+                'longitude' => $visit->client->longitude !== null ? (float) $visit->client->longitude : null,
                 'status' => SalesVisit::getStatusOptions()[$visit->status] ?? $visit->status,
                 'status_key' => $visit->status, // Adiciona a chave do status para lógica
                 'marker_category' => $markerCategory, // Nova chave para a cor/tipo do marcador
                 'edit_url' => route('filament.app.pages.processar-visita', ['visit_uuid' => $visit->uuid])
             ];
         })->values()->all();
+
+        $this->visitsForMap = collect($this->visitsForList)
+            ->filter(fn (array $visit): bool => $visit['latitude'] !== null && $visit['longitude'] !== null)
+            ->values()
+            ->all();
 
     }
 

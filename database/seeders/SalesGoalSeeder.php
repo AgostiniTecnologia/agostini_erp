@@ -49,9 +49,10 @@ class SalesGoalSeeder extends Seeder
                     $periodDate = Carbon::now()->addMonths($m)->startOfMonth();
 
                     // Verifica se já existe uma meta para este vendedor neste período
-                    $existingGoal = SalesGoal::where('company_id', $company->uuid)
+                    $existingGoal = SalesGoal::withTrashed()
+                        ->where('company_id', $company->uuid)
                         ->where('user_id', $salesperson->uuid)
-                        ->where('period', $periodDate->toDateString())
+                        ->whereDate('period', $periodDate)
                         ->first();
 
                     if ($existingGoal) {

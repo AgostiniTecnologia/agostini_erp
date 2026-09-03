@@ -95,16 +95,9 @@ class CreateClient extends CreateRecord
      */
     protected function checkOnlineStatus(): bool
     {
-        // Verificar via JavaScript se está online
-        // Como não podemos fazer isso diretamente em PHP, 
-        // vamos tentar fazer uma requisição leve
-        try {
-            $response = Http::timeout(2)->head(config('app.url'));
-            return $response->successful();
-        } catch (\Exception $e) {
-            return false;
-        }
+        return ! $this->isOffline;
     }
+    #[On('fetchCnpjClientData')]
     public function fetchCnpjClientData(string $cnpj): void
     {
         if (empty($cnpj)) {
@@ -153,11 +146,14 @@ class CreateClient extends CreateRecord
 
             $latitude  = $data['estabelecimento']['latitude'] ?? null;
             $longitude = $data['estabelecimento']['longitude'] ?? null;
+            $stateRegistration = collect($data['estabelecimento']['inscricoes_estaduais'] ?? [])
+                ->firstWhere('ativo', true)['inscricao_estadual'] ?? null;
 
             $newData = [
                 'social_name'       => $data['razao_social'] ?? null,
                 'taxNumber'         => $data['estabelecimento']['cnpj'] ?? $cnpj,
-                'name'              => $data['nome_fantasia'] ?? $data['razao_social'],
+                'name'              => $data['estabelecimento']['nome_fantasia'] ?? $data['razao_social'],
+                'state_registration'=> $stateRegistration,
                 'email'             => $data['estabelecimento']['email'] ?? null,
                 'phone_number'      => $this->formatPhoneNumber($data['estabelecimento'] ?? []),
 
