@@ -16,11 +16,7 @@
     </style>
 </head>
 <body>
-     <header>
-        <div>
-            <img src="images/logo-agostini-full_color-1-horizontal.png" alt="Agostini Tecnologia de Gestão" id="logo">
-        </div>
-    </header>
+    @include('pdf.partials.company_logo')
 
     <h1>Relatório de Transporte</h1>
     <p><strong>Período:</strong>

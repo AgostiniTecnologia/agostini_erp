@@ -113,6 +113,7 @@
     </style>
 </head>
 <body>
+@include('pdf.partials.company_logo')
 <div class="container">
     <h1>Dashboard de Produção</h1>
     <div class="header-info">Gerado em: {{ $date }}</div>

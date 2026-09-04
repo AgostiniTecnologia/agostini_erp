@@ -159,11 +159,7 @@
     </style>
 </head>
 <body>
-     <header>
-        <div>
-            <img src="images/logo-agostini-full_color-1-horizontal.png" alt="Agostini Tecnologia de Gestão">
-        </div>
-    </header>
+    @include('pdf.partials.company_logo', ['company' => $order->company])
     <div class="container">
     <h1>Ordem de Produção: {{ $order->order_number }}</h1>
 
@@ -237,6 +233,8 @@
                 $measurements = $product?->cardboard_measurements ?? [];
                 $profile = app(\App\Services\OperationalProfileResolver::class)->forCompany($order->company);
                 $displayValue = fn ($value, $suffix) => filled($value) ? str_replace('.', ',', (string) $value).$suffix : 'Não informado';
+                $lengthUnit = $order->company?->length_unit?->value ?? 'mm';
+                $weightUnit = $order->company?->weight_unit?->value ?? 'kg';
             @endphp
 
             <div class="measurements-title">Item {{ $loop->iteration }}: {{ $product->name ?? 'Produto não encontrado' }}</div>
@@ -250,45 +248,45 @@
                     <tr><th colspan="3">Medidas internas</th></tr>
                     <tr><th>Comprimento interno</th><th>Largura interna</th><th>Altura interna</th></tr>
                     <tr>
-                        <td>{{ $displayValue($measurements['internal_length'] ?? null, ' mm') }}</td>
-                        <td>{{ $displayValue($measurements['internal_width'] ?? null, ' mm') }}</td>
-                        <td>{{ $displayValue($measurements['internal_height'] ?? null, ' mm') }}</td>
+                        <td>{{ $displayValue($measurements['internal_length'] ?? null, ' '.$lengthUnit) }}</td>
+                        <td>{{ $displayValue($measurements['internal_width'] ?? null, ' '.$lengthUnit) }}</td>
+                        <td>{{ $displayValue($measurements['internal_height'] ?? null, ' '.$lengthUnit) }}</td>
                     </tr>
                 </table>
                 <table class="measurements-table">
                     <tr><th colspan="6">Composição do comprimento da chapa</th></tr>
                     <tr><th>Aba esquerda</th><th>Altura esquerda</th><th>Comprimento</th><th>Altura direita</th><th>Aba direita</th><th>Total</th></tr>
                     <tr>
-                        <td>{{ $displayValue($measurements['left_flap'] ?? null, ' mm') }}</td>
-                        <td>{{ $displayValue($measurements['left_height'] ?? null, ' mm') }}</td>
-                        <td>{{ $displayValue($measurements['sheet_length'] ?? null, ' mm') }}</td>
-                        <td>{{ $displayValue($measurements['right_height'] ?? null, ' mm') }}</td>
-                        <td>{{ $displayValue($measurements['right_flap'] ?? null, ' mm') }}</td>
-                        <td>{{ \App\Support\CardboardMeasurements::format($lengthTotal) }} mm</td>
+                        <td>{{ $displayValue($measurements['left_flap'] ?? null, ' '.$lengthUnit) }}</td>
+                        <td>{{ $displayValue($measurements['left_height'] ?? null, ' '.$lengthUnit) }}</td>
+                        <td>{{ $displayValue($measurements['sheet_length'] ?? null, ' '.$lengthUnit) }}</td>
+                        <td>{{ $displayValue($measurements['right_height'] ?? null, ' '.$lengthUnit) }}</td>
+                        <td>{{ $displayValue($measurements['right_flap'] ?? null, ' '.$lengthUnit) }}</td>
+                        <td>{{ \App\Support\CardboardMeasurements::format($lengthTotal) }} {{ $lengthUnit }}</td>
                     </tr>
                 </table>
                 <table class="measurements-table">
                     <tr><th colspan="6">Composição da largura da chapa</th></tr>
                     <tr><th>Aba superior</th><th>Altura superior</th><th>Largura</th><th>Altura inferior</th><th>Aba inferior</th><th>Total</th></tr>
                     <tr>
-                        <td>{{ $displayValue($measurements['top_flap'] ?? null, ' mm') }}</td>
-                        <td>{{ $displayValue($measurements['top_height'] ?? null, ' mm') }}</td>
-                        <td>{{ $displayValue($measurements['sheet_width'] ?? null, ' mm') }}</td>
-                        <td>{{ $displayValue($measurements['bottom_height'] ?? null, ' mm') }}</td>
-                        <td>{{ $displayValue($measurements['bottom_flap'] ?? null, ' mm') }}</td>
-                        <td>{{ \App\Support\CardboardMeasurements::format($widthTotal) }} mm</td>
+                        <td>{{ $displayValue($measurements['top_flap'] ?? null, ' '.$lengthUnit) }}</td>
+                        <td>{{ $displayValue($measurements['top_height'] ?? null, ' '.$lengthUnit) }}</td>
+                        <td>{{ $displayValue($measurements['sheet_width'] ?? null, ' '.$lengthUnit) }}</td>
+                        <td>{{ $displayValue($measurements['bottom_height'] ?? null, ' '.$lengthUnit) }}</td>
+                        <td>{{ $displayValue($measurements['bottom_flap'] ?? null, ' '.$lengthUnit) }}</td>
+                        <td>{{ \App\Support\CardboardMeasurements::format($widthTotal) }} {{ $lengthUnit }}</td>
                     </tr>
-                    <tr><td colspan="6" class="sheet-size">Tamanho da chapa: {{ \App\Support\CardboardMeasurements::format($lengthTotal) }} × {{ \App\Support\CardboardMeasurements::format($widthTotal) }} mm</td></tr>
+                    <tr><td colspan="6" class="sheet-size">Tamanho da chapa: {{ \App\Support\CardboardMeasurements::format($lengthTotal) }} × {{ \App\Support\CardboardMeasurements::format($widthTotal) }} {{ $lengthUnit }}</td></tr>
                 </table>
             @else
                 <table class="measurements-table">
                     <tr><th>Peso líquido</th><th>Peso bruto</th><th>Comprimento</th><th>Largura</th><th>Altura</th></tr>
                     <tr>
-                        <td>{{ $displayValue($product?->weight_net, ' kg') }}</td>
-                        <td>{{ $displayValue($product?->weight, ' kg') }}</td>
-                        <td>{{ $displayValue($product?->length, ' m') }}</td>
-                        <td>{{ $displayValue($product?->width, ' m') }}</td>
-                        <td>{{ $displayValue($product?->height, ' m') }}</td>
+                        <td>{{ $displayValue($product?->weight_net, ' '.$weightUnit) }}</td>
+                        <td>{{ $displayValue($product?->weight, ' '.$weightUnit) }}</td>
+                        <td>{{ $displayValue($product?->length, ' '.$lengthUnit) }}</td>
+                        <td>{{ $displayValue($product?->width, ' '.$lengthUnit) }}</td>
+                        <td>{{ $displayValue($product?->height, ' '.$lengthUnit) }}</td>
                     </tr>
                 </table>
             @endif

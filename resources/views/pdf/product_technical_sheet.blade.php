@@ -19,10 +19,13 @@
     </style>
 </head>
 <body>
+    @include('pdf.partials.company_logo', ['company' => $product->company])
     @php
         $measurements = $product->cardboard_measurements ?? [];
+        $lengthUnit = $product->company?->length_unit?->value ?? 'm';
+        $weightUnit = $product->company?->weight_unit?->value ?? 'kg';
         $value = fn ($field, $suffix = '') => filled(data_get($product, $field)) ? data_get($product, $field).$suffix : 'Não informado';
-        $measurement = fn ($field) => filled($measurements[$field] ?? null) ? str_replace('.', ',', $measurements[$field]).' mm' : 'Não informado';
+        $measurement = fn ($field) => filled($measurements[$field] ?? null) ? str_replace('.', ',', $measurements[$field]).' '.$lengthUnit : 'Não informado';
         $money = fn ($field) => filled($product->{$field}) ? 'R$ '.number_format((float) $product->{$field}, 2, ',', '.') : 'Não informado';
     @endphp
 
@@ -55,7 +58,7 @@
             <tr><th>Aba esquerda</th><th>Altura esquerda</th><th>Comprimento</th><th>Altura direita</th><th>Aba direita</th><th>Total</th></tr>
             <tr>
                 <td>{{ $measurement('left_flap') }}</td><td>{{ $measurement('left_height') }}</td><td>{{ $measurement('sheet_length') }}</td>
-                <td>{{ $measurement('right_height') }}</td><td>{{ $measurement('right_flap') }}</td><td>{{ \App\Support\CardboardMeasurements::format($lengthTotal) }} mm</td>
+                <td>{{ $measurement('right_height') }}</td><td>{{ $measurement('right_flap') }}</td><td>{{ \App\Support\CardboardMeasurements::format($lengthTotal) }} {{ $lengthUnit }}</td>
             </tr>
         </table>
 
@@ -64,16 +67,16 @@
             <tr><th>Aba superior</th><th>Altura superior</th><th>Largura</th><th>Altura inferior</th><th>Aba inferior</th><th>Total</th></tr>
             <tr>
                 <td>{{ $measurement('top_flap') }}</td><td>{{ $measurement('top_height') }}</td><td>{{ $measurement('sheet_width') }}</td>
-                <td>{{ $measurement('bottom_height') }}</td><td>{{ $measurement('bottom_flap') }}</td><td>{{ \App\Support\CardboardMeasurements::format($widthTotal) }} mm</td>
+                <td>{{ $measurement('bottom_height') }}</td><td>{{ $measurement('bottom_flap') }}</td><td>{{ \App\Support\CardboardMeasurements::format($widthTotal) }} {{ $lengthUnit }}</td>
             </tr>
         </table>
-        <table><tr><td class="result">Tamanho da chapa: {{ \App\Support\CardboardMeasurements::format($lengthTotal) }} × {{ \App\Support\CardboardMeasurements::format($widthTotal) }} mm</td></tr></table>
+        <table><tr><td class="result">Tamanho da chapa: {{ \App\Support\CardboardMeasurements::format($lengthTotal) }} × {{ \App\Support\CardboardMeasurements::format($widthTotal) }} {{ $lengthUnit }}</td></tr></table>
     @else
         <h2>Medidas e peso</h2>
         <table>
-            <tr><td class="label">Peso líquido</td><td>{{ $value('weight_net', ' kg') }}</td><td class="label">Peso bruto</td><td>{{ $value('weight', ' kg') }}</td></tr>
-            <tr><td class="label">Comprimento</td><td>{{ $value('length', ' m') }}</td><td class="label">Largura</td><td>{{ $value('width', ' m') }}</td></tr>
-            <tr><td class="label">Altura</td><td colspan="3">{{ $value('height', ' m') }}</td></tr>
+            <tr><td class="label">Peso líquido</td><td>{{ $value('weight_net', ' '.$weightUnit) }}</td><td class="label">Peso bruto</td><td>{{ $value('weight', ' '.$weightUnit) }}</td></tr>
+            <tr><td class="label">Comprimento</td><td>{{ $value('length', ' '.$lengthUnit) }}</td><td class="label">Largura</td><td>{{ $value('width', ' '.$lengthUnit) }}</td></tr>
+            <tr><td class="label">Altura</td><td colspan="3">{{ $value('height', ' '.$lengthUnit) }}</td></tr>
         </table>
     @endif
 

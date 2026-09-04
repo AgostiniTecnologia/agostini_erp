@@ -114,11 +114,7 @@
     </style>
 </head>
 <body>
-     <header>
-        <div>
-            <img src="images/logo-agostini-full_color-1-horizontal.png" alt="Agostini Tecnologia de Gestão">
-        </div>
-    </header>
+    @include('pdf.partials.company_logo', ['company' => $transportOrder->company])
 <div class="container">
     <div class="header">
         <h1>Documento de Acompanhamento de Carga</h1>

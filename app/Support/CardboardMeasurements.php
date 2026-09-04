@@ -43,6 +43,39 @@ class CardboardMeasurements
         return rtrim(rtrim(number_format((float) $normalized, 3, '.', ''), '0'), '.');
     }
 
+    /**
+     * Monta as medidas de corte a partir das únicas medidas informadas pelo usuário.
+     */
+    public static function fromInternalDimensions(
+        array $measurements,
+        mixed $foldMargin = 5,
+        mixed $lengthFlapDefault = 60,
+    ): array {
+        $length = (float) (self::normalize($measurements['internal_length'] ?? null) ?? 0);
+        $width = (float) (self::normalize($measurements['internal_width'] ?? null) ?? 0);
+        $height = (float) (self::normalize($measurements['internal_height'] ?? null) ?? 0);
+        $margin = (float) (self::normalize($foldMargin) ?? 5);
+        $lengthFlap = (float) (self::normalize($lengthFlapDefault) ?? 60);
+
+        return array_merge($measurements, [
+            'left_flap' => self::normalizedNumber($lengthFlap),
+            'left_height' => self::normalizedNumber($height + $margin),
+            'sheet_length' => self::normalizedNumber($length + $margin),
+            'right_height' => self::normalizedNumber($height + $margin),
+            'right_flap' => self::normalizedNumber($lengthFlap),
+            'top_flap' => self::normalizedNumber(($width / 2) + $margin),
+            'top_height' => self::normalizedNumber($height + ($margin * 2)),
+            'sheet_width' => self::normalizedNumber($width + $margin),
+            'bottom_height' => self::normalizedNumber($height + ($margin * 2)),
+            'bottom_flap' => self::normalizedNumber(($width / 2) + $margin),
+        ]);
+    }
+
+    private static function normalizedNumber(float $value): string
+    {
+        return self::normalize($value) ?? '0';
+    }
+
     public static function total(array $measurements, array $fields): float
     {
         return array_reduce(

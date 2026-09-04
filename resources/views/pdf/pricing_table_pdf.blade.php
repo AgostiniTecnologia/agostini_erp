@@ -15,11 +15,7 @@
     </style>
 </head>
 <body>
-    <header>
-        <div>
-            <img src="images/logo-agostini-full_color-2.png" alt="Agostini Tecnologia de Gestão">
-        </div>
-    </header>
+    @include('pdf.partials.company_logo')
     <div class="header">
          <h1>Tabela de Precificação</h1>
          <p>Gerado em: {{ \Carbon\Carbon::now()->translatedFormat('d/m/y H:i') }}</p>

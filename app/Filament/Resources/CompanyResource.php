@@ -2,13 +2,17 @@
 
 namespace App\Filament\Resources;
 
+use App\Enums\LengthUnit;
 use App\Enums\OperationalProfile;
+use App\Enums\WeightUnit;
 use App\Filament\Resources\CompanyResource\Pages;
 use App\Models\Company;
 // use Filament\Forms\Components\Grid; // Não será mais usado diretamente no schema principal
 use Cheesegrits\FilamentGoogleMaps\Fields\Map;
 use Filament\Forms\Components\Actions\Action;
+use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Group;
+use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Tabs;
 use Filament\Forms\Components\TextInput;
@@ -23,6 +27,7 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope; // Garanta que o alias Livewire está correto
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Livewire\Component as Livewire;
 
@@ -46,6 +51,8 @@ class CompanyResource extends Resource
     {
         return $form
             ->schema([
+                Hidden::make('uuid')
+                    ->default(fn (): string => (string) Str::uuid()),
                 Tabs::make('ClientTabs')
                     ->tabs([
                         Tabs\Tab::make('Dados Cadastrais')
@@ -112,6 +119,12 @@ class CompanyResource extends Resource
                                     ->maxLength(20)
                                     ->columnSpan(['default' => 3, 'lg' => 4]),
 
+                            ]),
+
+                        Tabs\Tab::make('Configurações')
+                            ->icon('heroicon-o-cog-6-tooth')
+                            ->columns(['default' => 1, 'lg' => 2])
+                            ->schema([
                                 Select::make('operational_profile')
                                     ->label('Perfil operacional')
                                     ->options(OperationalProfile::class)
@@ -119,8 +132,36 @@ class CompanyResource extends Resource
                                     ->required()
                                     ->native(false)
                                     ->searchable()
-                                    ->helperText('Define o segmento da empresa e o modelo de configuração utilizado pelo sistema.')
-                                    ->columnSpan(['default' => 3, 'lg' => 4]),
+                                    ->live()
+                                    ->helperText('Define o segmento da empresa e o modelo de configuração utilizado pelo sistema.'),
+                                Select::make('length_unit')
+                                    ->label('Unidade de tamanho')
+                                    ->options(LengthUnit::class)
+                                    ->default(LengthUnit::Meter->value)
+                                    ->required()
+                                    ->native(false),
+                                Select::make('weight_unit')
+                                    ->label('Unidade de peso')
+                                    ->options(WeightUnit::class)
+                                    ->default(WeightUnit::Kilogram->value)
+                                    ->required()
+                                    ->native(false),
+                                TextInput::make('fold_margin')
+                                    ->label('Margem de dobra')
+                                    ->suffix(fn (Get $get): string => $get('length_unit') ?? LengthUnit::Meter->value)
+                                    ->numeric()
+                                    ->minValue(0)
+                                    ->default(5)
+                                    ->required()
+                                    ->visible(fn (Get $get): bool => $get('operational_profile') === OperationalProfile::CardboardPackaging->value),
+                                TextInput::make('length_flap_default')
+                                    ->label('Padrão aba Comprimento')
+                                    ->suffix(fn (Get $get): string => $get('length_unit') ?? LengthUnit::Meter->value)
+                                    ->numeric()
+                                    ->minValue(0)
+                                    ->default(60)
+                                    ->required()
+                                    ->visible(fn (Get $get): bool => $get('operational_profile') === OperationalProfile::CardboardPackaging->value),
                             ]),
 
                         Tabs\Tab::make('Endereço e Localização')
@@ -235,6 +276,23 @@ class CompanyResource extends Resource
                                         ]),
                                 ])->columns(2),
                             ])->columns(2),
+                        Tabs\Tab::make('Logo')
+                            ->icon('heroicon-o-photo')
+                            ->schema([
+                                FileUpload::make('logo_path')
+                                    ->label('Logo da empresa')
+                                    ->disk('public')
+                                    ->directory(fn (Get $get): string => 'company-logos/'.$get('uuid'))
+                                    ->acceptedFileTypes(['image/png', 'image/jpeg', 'image/webp'])
+                                    ->maxSize(2048)
+                                    ->image()
+                                    ->imageEditor()
+                                    ->imageResizeMode('contain')
+                                    ->imageResizeTargetWidth('600')
+                                    ->imageResizeTargetHeight('200')
+                                    ->helperText('PNG, JPG ou WebP, com até 2 MB. Formato horizontal recomendado (600 × 200 px). Se não houver logo, será usada a marca padrão do sistema.')
+                                    ->columnSpanFull(),
+                            ]),
                     ])->columnSpanFull(),
             ]);
     }

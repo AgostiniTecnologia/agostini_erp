@@ -40,6 +40,11 @@ class Product extends Model
         'sale_price',
         'minimum_sale_price',
         'stock',
+        'weight_net',
+        'weight',
+        'length',
+        'width',
+        'height',
         'cardboard_measurements',
     ];
 
@@ -119,6 +124,15 @@ class Product extends Model
             if (Auth::check() && ! app(OperationalProfileResolver::class)->isCardboardPackaging()) {
                 unset($model->cardboard_measurements);
             }
+
+            if ($model->cardboard_measurements && app(OperationalProfileResolver::class)->isCardboardPackaging()) {
+                $company = Auth::user()?->company;
+                $model->cardboard_measurements = \App\Support\CardboardMeasurements::fromInternalDimensions(
+                    $model->cardboard_measurements,
+                    $company?->fold_margin ?? 5,
+                    $company?->length_flap_default ?? 60,
+                );
+            }
         });
 
         static::updating(function (Product $product) {
@@ -126,6 +140,16 @@ class Product extends Model
                 && $product->isDirty('cardboard_measurements')
                 && ! app(OperationalProfileResolver::class)->isCardboardPackaging()) {
                 $product->cardboard_measurements = $product->getOriginal('cardboard_measurements');
+            }
+
+            if ($product->isDirty('cardboard_measurements')
+                && app(OperationalProfileResolver::class)->isCardboardPackaging()) {
+                $company = Auth::user()?->company;
+                $product->cardboard_measurements = \App\Support\CardboardMeasurements::fromInternalDimensions(
+                    $product->cardboard_measurements ?? [],
+                    $company?->fold_margin ?? 5,
+                    $company?->length_flap_default ?? 60,
+                );
             }
         });
     }

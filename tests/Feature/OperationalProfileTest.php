@@ -19,6 +19,10 @@ class OperationalProfileTest extends TestCase
         $company = Company::factory()->create();
 
         $this->assertSame(OperationalProfile::Standard, $company->operational_profile);
+        $this->assertSame('m', $company->length_unit->value);
+        $this->assertSame('kg', $company->weight_unit->value);
+        $this->assertSame('5.000', $company->fold_margin);
+        $this->assertSame('60.000', $company->length_flap_default);
     }
 
     public function test_it_resolves_the_authenticated_company_profile(): void
@@ -91,6 +95,32 @@ class OperationalProfileTest extends TestCase
         ]);
 
         $this->assertSame($measurements, $product->fresh()->cardboard_measurements);
+    }
+
+    public function test_cardboard_cut_measurements_use_the_company_configuration(): void
+    {
+        $company = Company::factory()->create([
+            'operational_profile' => OperationalProfile::CardboardPackaging,
+            'fold_margin' => 8,
+            'length_flap_default' => 70,
+        ]);
+        $this->actingAs(User::factory()->for($company)->create());
+
+        $product = Product::factory()->forCompany($company)->create([
+            'cardboard_measurements' => [
+                'internal_length' => '100',
+                'internal_width' => '40',
+                'internal_height' => '20',
+            ],
+        ]);
+
+        $measurements = $product->fresh()->cardboard_measurements;
+        $this->assertSame('70', $measurements['left_flap']);
+        $this->assertSame('28', $measurements['left_height']);
+        $this->assertSame('108', $measurements['sheet_length']);
+        $this->assertSame('28', $measurements['top_flap']);
+        $this->assertSame('36', $measurements['top_height']);
+        $this->assertSame('48', $measurements['sheet_width']);
     }
 
     public function test_tenant_scope_prevents_measurements_from_appearing_in_another_company(): void

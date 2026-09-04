@@ -2,12 +2,15 @@
 
 namespace App\Models;
 
+use App\Enums\LengthUnit;
 use App\Enums\OperationalProfile;
+use App\Enums\WeightUnit;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Storage;
 
 class Company extends Model
 {
@@ -23,6 +26,7 @@ class Company extends Model
      * Atributos que podem ser atribuídos em massa.
      */
     protected $fillable = [
+        'uuid',
         'name',
         'socialName',
         'taxNumber',
@@ -37,6 +41,11 @@ class Company extends Model
         'longitude',
         'telephone',
         'operational_profile',
+        'length_unit',
+        'weight_unit',
+        'fold_margin',
+        'length_flap_default',
+        'logo_path',
     ];
 
     /**
@@ -44,6 +53,10 @@ class Company extends Model
      */
     protected $casts = [
         'operational_profile' => OperationalProfile::class,
+        'length_unit' => LengthUnit::class,
+        'weight_unit' => WeightUnit::class,
+        'fold_margin' => 'decimal:3',
+        'length_flap_default' => 'decimal:3',
     ];
 
     /**
@@ -62,6 +75,36 @@ class Company extends Model
     public function holidays(): HasMany
     {
         return $this->hasMany(Holiday::class, 'company_id', 'uuid');
+    }
+
+    /**
+     * Retorna uma imagem embutida, compatível com DomPDF, sem expor arquivos
+     * de outra empresa. Na ausência de logo personalizada usa a marca padrão.
+     */
+    public function reportLogoDataUri(): string
+    {
+        $disk = Storage::disk('public');
+
+        $companyDirectory = 'company-logos/'.$this->getKey().'/';
+
+        if ($this->logo_path
+            && str_starts_with($this->logo_path, $companyDirectory)
+            && $disk->exists($this->logo_path)) {
+            $mimeType = $disk->mimeType($this->logo_path);
+
+            if (in_array($mimeType, ['image/png', 'image/jpeg', 'image/webp'], true)) {
+                return 'data:'.$mimeType.';base64,'.base64_encode($disk->get($this->logo_path));
+            }
+        }
+
+        return static::defaultReportLogoDataUri();
+    }
+
+    public static function defaultReportLogoDataUri(): string
+    {
+        $path = public_path('images/logo-agostini-full_color-1-horizontal.png');
+
+        return 'data:image/png;base64,'.base64_encode(file_get_contents($path));
     }
 
     // Em App\Models\Company.php e App\Models\Client.php

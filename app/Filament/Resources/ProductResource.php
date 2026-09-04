@@ -107,33 +107,38 @@ class ProductResource extends Resource
                             ->hidden(fn (): bool => app(OperationalProfileResolver::class)->isCardboardPackaging())
                             ->schema([
                                 Forms\Components\TextInput::make('weight_net')
-                                    ->label('Peso Liquido (kg)')
+                                    ->label('Peso líquido')
+                                    ->suffix(fn (): string => self::weightUnit())
                                     ->numeric()
                                     ->maxValue(42949672.95)
                                     ->default(null)
                                     ->columnSpan(['default' => 2, 'lg' => 1]),
 
                                 Forms\Components\TextInput::make('weight')
-                                    ->label('Peso Bruto (kg)')
+                                    ->label('Peso bruto')
+                                    ->suffix(fn (): string => self::weightUnit())
                                     ->numeric()
                                     ->maxValue(42949672.95)
                                     ->default(null)
                                     ->columnSpan(['default' => 2, 'lg' => 1]),
 
                                 Forms\Components\TextInput::make('length')
-                                    ->label('Comprimento (m)')
+                                    ->label('Comprimento')
+                                    ->suffix(fn (): string => self::lengthUnit())
                                     ->numeric()
                                     ->maxValue(42949672.95)
                                     ->default(null)
                                     ->columnSpan(['default' => 2, 'lg' => 1]),
                                 Forms\Components\TextInput::make('width')
-                                    ->label('Largura (m)')
+                                    ->label('Largura')
+                                    ->suffix(fn (): string => self::lengthUnit())
                                     ->numeric()
                                     ->maxValue(42949672.95)
                                     ->default(null)
                                     ->columnSpan(['default' => 2, 'lg' => 1]),
                                 Forms\Components\TextInput::make('height')
-                                    ->label('Altura (m)')
+                                    ->label('Altura')
+                                    ->suffix(fn (): string => self::lengthUnit())
                                     ->numeric()
                                     ->maxValue(42949672.95)
                                     ->default(null)
@@ -247,5 +252,15 @@ class ProductResource extends Resource
     public static function getGloballySearchableAttributes(): array
     {
         return ['name', 'sku'];
+    }
+
+    private static function lengthUnit(): string
+    {
+        return auth()->user()?->company?->length_unit?->value ?? 'm';
+    }
+
+    private static function weightUnit(): string
+    {
+        return auth()->user()?->company?->weight_unit?->value ?? 'kg';
     }
 }

@@ -64,4 +64,22 @@ class CardboardMeasurementsTest extends TestCase
         $this->assertSame('2071', CardboardMeasurements::format(2071));
         $this->assertSame('1019', CardboardMeasurements::format(1019));
     }
+
+    public function test_it_generates_cut_measurements_from_internal_dimensions_and_company_defaults(): void
+    {
+        $measurements = CardboardMeasurements::fromInternalDimensions([
+            'internal_length' => '1742',
+            'internal_width' => '395',
+            'internal_height' => '97',
+        ], 5, 60);
+
+        $this->assertSame('60', $measurements['left_flap']);
+        $this->assertSame('102', $measurements['left_height']);
+        $this->assertSame('1747', $measurements['sheet_length']);
+        $this->assertSame('202.5', $measurements['top_flap']);
+        $this->assertSame('107', $measurements['top_height']);
+        $this->assertSame('400', $measurements['sheet_width']);
+        $this->assertSame(2071.0, CardboardMeasurements::lengthTotal($measurements));
+        $this->assertSame(1019.0, CardboardMeasurements::widthTotal($measurements));
+    }
 }

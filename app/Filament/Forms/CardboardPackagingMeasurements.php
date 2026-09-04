@@ -8,6 +8,7 @@ use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Get;
+use Filament\Forms\Set;
 use Illuminate\Support\HtmlString;
 
 class CardboardPackagingMeasurements
@@ -19,28 +20,28 @@ class CardboardPackagingMeasurements
                 ->schema([
                     Section::make('Medidas internas')
                         ->schema([
-                            self::measurement('internal_length', 'Comprimento interno'),
-                            self::measurement('internal_width', 'Largura interna'),
-                            self::measurement('internal_height', 'Altura interna'),
+                            self::measurement('internal_length', 'Comprimento interno', true),
+                            self::measurement('internal_width', 'Largura interna', true),
+                            self::measurement('internal_height', 'Altura interna', true),
                         ])
                         ->columns(['default' => 1, 'md' => 3]),
                     Section::make('Composição do comprimento da chapa')
                         ->schema([
-                            self::measurement('left_flap', 'Aba esquerda'),
-                            self::measurement('left_height', 'Altura esquerda'),
-                            self::measurement('sheet_length', 'Comprimento'),
-                            self::measurement('right_height', 'Altura direita'),
-                            self::measurement('right_flap', 'Aba direita'),
+                            self::measurement('left_flap', 'Aba esquerda')->readOnly(),
+                            self::measurement('left_height', 'Altura esquerda')->readOnly(),
+                            self::measurement('sheet_length', 'Comprimento')->readOnly(),
+                            self::measurement('right_height', 'Altura direita')->readOnly(),
+                            self::measurement('right_flap', 'Aba direita')->readOnly(),
                             self::total('Comprimento total', CardboardMeasurements::LENGTH_FIELDS),
                         ])
                         ->columns(['default' => 1, 'md' => 3, 'xl' => 6]),
                     Section::make('Composição da largura da chapa')
                         ->schema([
-                            self::measurement('top_flap', 'Aba superior'),
-                            self::measurement('top_height', 'Altura superior'),
-                            self::measurement('sheet_width', 'Largura'),
-                            self::measurement('bottom_height', 'Altura inferior'),
-                            self::measurement('bottom_flap', 'Aba inferior'),
+                            self::measurement('top_flap', 'Aba superior')->readOnly(),
+                            self::measurement('top_height', 'Altura superior')->readOnly(),
+                            self::measurement('sheet_width', 'Largura')->readOnly(),
+                            self::measurement('bottom_height', 'Altura inferior')->readOnly(),
+                            self::measurement('bottom_flap', 'Aba inferior')->readOnly(),
                             self::total('Largura total', CardboardMeasurements::WIDTH_FIELDS),
                         ])
                         ->columns(['default' => 1, 'md' => 3, 'xl' => 6]),
@@ -50,19 +51,20 @@ class CardboardPackagingMeasurements
                             $measurements = self::measurements($get);
                             $length = CardboardMeasurements::format(CardboardMeasurements::lengthTotal($measurements));
                             $width = CardboardMeasurements::format(CardboardMeasurements::widthTotal($measurements));
+                            $unit = auth()->user()?->company?->length_unit?->value ?? 'm';
 
-                            return new HtmlString("<strong>{$length} × {$width} mm</strong>");
+                            return new HtmlString("<strong>{$length} × {$width} {$unit}</strong>");
                         })
                         ->columnSpanFull(),
                 ]),
         ];
     }
 
-    private static function measurement(string $name, string $label): TextInput
+    private static function measurement(string $name, string $label, bool $recalculate = false): TextInput
     {
-        return TextInput::make("cardboard_measurements.{$name}")
+        $input = TextInput::make("cardboard_measurements.{$name}")
             ->label($label)
-            ->suffix('mm')
+            ->suffix(fn (): string => auth()->user()?->company?->length_unit?->value ?? 'm')
             ->inputMode('decimal')
             ->live(debounce: 300)
             ->rule(static function (): Closure {
@@ -85,6 +87,13 @@ class CardboardPackagingMeasurements
                     })()
                     JS,
             ]);
+
+        if ($recalculate) {
+            $input->afterStateUpdated(fn (Get $get, Set $set) => self::recalculate($get, $set));
+            $input->afterStateHydrated(fn (Get $get, Set $set) => self::recalculate($get, $set));
+        }
+
+        return $input;
     }
 
     private static function total(string $label, array $fields): Placeholder
@@ -94,12 +103,28 @@ class CardboardPackagingMeasurements
             ->content(function (Get $get) use ($fields): string {
                 return CardboardMeasurements::format(
                     CardboardMeasurements::total(self::measurements($get), $fields),
-                ).' mm';
+                ).' '.(auth()->user()?->company?->length_unit?->value ?? 'm');
             });
     }
 
     private static function measurements(Get $get): array
     {
         return (array) ($get('cardboard_measurements') ?? []);
+    }
+
+    private static function recalculate(Get $get, Set $set): void
+    {
+        $company = auth()->user()?->company;
+        $calculated = CardboardMeasurements::fromInternalDimensions(
+            self::measurements($get),
+            $company?->fold_margin ?? 5,
+            $company?->length_flap_default ?? 60,
+        );
+
+        foreach ($calculated as $field => $value) {
+            if (! str_starts_with($field, 'internal_')) {
+                $set("cardboard_measurements.{$field}", $value);
+            }
+        }
     }
 }

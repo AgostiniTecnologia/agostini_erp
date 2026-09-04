@@ -5,7 +5,6 @@ namespace Database\Factories;
 use App\Enums\OperationalProfile;
 use App\Models\Company;
 use Illuminate\Database\Eloquent\Factories\Factory;
-use Illuminate\Support\Str;
 
 /**
  * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Company>
@@ -30,19 +29,23 @@ class CompanyFactory extends Factory
 
         return [
             'name' => $this->faker->company,
-            'socialName' => $this->faker->company . ' ' . $this->faker->companySuffix,
+            'socialName' => $this->faker->company.' '.$this->faker->companySuffix,
             'taxNumber' => $this->faker->unique()->numerify('##############'), // 14 digits for CNPJ
             'address_zip_code' => $this->faker->postcode,
             'address_street' => $this->faker->streetName,
             'address_number' => $this->faker->buildingNumber,
             'address_complement' => $this->faker->optional()->secondaryAddress,
-            'address_district' => $this->faker->citySuffix . ' ' . $this->faker->streetSuffix, // Exemplo para bairro
+            'address_district' => $this->faker->citySuffix.' '.$this->faker->streetSuffix, // Exemplo para bairro
             'address_city' => $this->faker->city,
             'address_state' => $this->faker->stateAbbr,
             'latitude' => $this->faker->latitude,
             'longitude' => $this->faker->longitude,
             'telephone' => $this->faker->numerify('###########'),
             'operational_profile' => OperationalProfile::Standard,
+            'length_unit' => 'm',
+            'weight_unit' => 'kg',
+            'fold_margin' => 5,
+            'length_flap_default' => 60,
         ];
     }
 

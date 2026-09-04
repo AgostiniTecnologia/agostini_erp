@@ -24,7 +24,7 @@ class CompanyController extends Controller
             'name' => 'required|string',
             'socialName' => 'required|string',
             'taxNumber' => 'required|string|unique:companies,taxNumber',
-            'address_zip_code'=> 'nullable|string',
+            'address_zip_code' => 'nullable|string',
             'address_street' => 'nullable|string',
             'address_number' => 'nullable|string',
             'address_complement' => 'nullable|string',
@@ -34,6 +34,11 @@ class CompanyController extends Controller
             'latitude' => 'nullable|numeric',
             'longitude' => 'nullable|numeric',
             'telephone' => 'nullable|string',
+            'operational_profile' => 'sometimes|string',
+            'length_unit' => 'sometimes|in:mm,cm,m',
+            'weight_unit' => 'sometimes|in:g,kg,t',
+            'fold_margin' => 'sometimes|numeric|min:0',
+            'length_flap_default' => 'sometimes|numeric|min:0',
         ]);
 
         $company = Company::create($data);
@@ -63,8 +68,8 @@ class CompanyController extends Controller
         $data = $request->validate([
             'name' => 'sometimes|string',
             'socialName' => 'sometimes|string',
-            'taxNumber' => 'sometimes|string|unique:companies,taxNumber,' . $company->uuid . ',uuid',
-            'address_zip_code'=> 'nullable|string',
+            'taxNumber' => 'sometimes|string|unique:companies,taxNumber,'.$company->uuid.',uuid',
+            'address_zip_code' => 'nullable|string',
             'address_street' => 'nullable|string',
             'address_number' => 'nullable|string',
             'address_complement' => 'nullable|string',
@@ -74,6 +79,11 @@ class CompanyController extends Controller
             'latitude' => 'nullable|numeric',
             'longitude' => 'nullable|numeric',
             'telephone' => 'nullable|string',
+            'operational_profile' => 'sometimes|string',
+            'length_unit' => 'sometimes|in:mm,cm,m',
+            'weight_unit' => 'sometimes|in:g,kg,t',
+            'fold_margin' => 'sometimes|numeric|min:0',
+            'length_flap_default' => 'sometimes|numeric|min:0',
         ]);
 
         $company->update($data);
@@ -92,7 +102,7 @@ class CompanyController extends Controller
         $company->delete();
 
         return response()->json([
-            'message' => 'Empresa removida com sucesso'
+            'message' => 'Empresa removida com sucesso',
         ]);
     }
 }

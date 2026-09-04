@@ -17,11 +17,7 @@
     </style>
 </head>
 <body>
-     <header>
-        <div>
-            <img src="images/logo-agostini-full_color-1-horizontal.png" alt="Agostini Tecnologia de Gestão">
-        </div>
-    </header>
+    @include('pdf.partials.company_logo')
 <div class="header">
     <h1>Relatório de Visitas sem Pedido</h1>
     <p>Gerado em: {{ $date }}</p>
@@ -65,4 +61,3 @@
 </div>
 </body>
 </html>
-
