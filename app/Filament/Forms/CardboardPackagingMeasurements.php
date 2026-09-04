@@ -34,7 +34,10 @@ class CardboardPackagingMeasurements
                                     ->requiresConfirmation()
                                     ->modalHeading('Limpar todas as medidas?')
                                     ->modalDescription('As medidas internas e todos os cálculos automáticos serão removidos.')
-                                    ->action(fn (Set $set) => $set('cardboard_measurements', null)),
+                                    ->action(fn (Set $set) => $set(
+                                        'cardboard_measurements',
+                                        CardboardMeasurements::emptyState(),
+                                    )),
                             ])->columnSpanFull(),
                         ])
                         ->columns(['default' => 1, 'md' => 3]),

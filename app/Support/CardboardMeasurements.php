@@ -6,6 +6,12 @@ use InvalidArgumentException;
 
 class CardboardMeasurements
 {
+    public const INTERNAL_FIELDS = [
+        'internal_length',
+        'internal_width',
+        'internal_height',
+    ];
+
     public const LENGTH_FIELDS = [
         'left_flap',
         'left_height',
@@ -21,6 +27,15 @@ class CardboardMeasurements
         'bottom_height',
         'bottom_flap',
     ];
+
+    public static function emptyState(): array
+    {
+        return array_fill_keys([
+            ...self::INTERNAL_FIELDS,
+            ...self::LENGTH_FIELDS,
+            ...self::WIDTH_FIELDS,
+        ], null);
+    }
 
     public static function normalize(mixed $value): ?string
     {

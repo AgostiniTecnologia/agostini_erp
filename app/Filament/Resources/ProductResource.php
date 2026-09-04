@@ -17,6 +17,7 @@ use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Illuminate\Validation\Rule;
 
 class ProductResource extends Resource
 {
@@ -52,6 +53,13 @@ class ProductResource extends Resource
                                 Forms\Components\TextInput::make('sku')
                                     ->label('SKU')
                                     ->maxLength(255)
+                                    ->rule(function ($record) {
+                                        $companyId = $record?->company_id ?? auth()->user()?->company_id;
+
+                                        return Rule::unique('products', 'sku')
+                                            ->where('company_id', $companyId)
+                                            ->ignore($record?->uuid, 'uuid');
+                                    })
                                     ->columnSpan(1),
                                 Forms\Components\TextInput::make('stock')
                                     ->label('Estoque')

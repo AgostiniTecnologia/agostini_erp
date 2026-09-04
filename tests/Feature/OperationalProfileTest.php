@@ -150,7 +150,7 @@ class OperationalProfileTest extends TestCase
             ],
         ]);
 
-        $product->update(['cardboard_measurements' => null]);
+        $product->update(['cardboard_measurements' => \App\Support\CardboardMeasurements::emptyState()]);
 
         $this->assertNull($product->fresh()->cardboard_measurements);
     }

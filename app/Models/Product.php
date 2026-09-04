@@ -126,6 +126,10 @@ class Product extends Model
                 unset($model->cardboard_measurements);
             }
 
+            if (! self::hasInternalMeasurements($model->cardboard_measurements)) {
+                $model->cardboard_measurements = null;
+            }
+
             if (self::hasInternalMeasurements($model->cardboard_measurements)
                 && app(OperationalProfileResolver::class)->isCardboardPackaging()) {
                 $company = CompanyMeasurementSettings::company();
@@ -145,6 +149,12 @@ class Product extends Model
             }
 
             if ($product->isDirty('cardboard_measurements')
+                && app(OperationalProfileResolver::class)->isCardboardPackaging()
+                && ! self::hasInternalMeasurements($product->cardboard_measurements)) {
+                $product->cardboard_measurements = null;
+            }
+
+            if ($product->isDirty('cardboard_measurements')
                 && self::hasInternalMeasurements($product->cardboard_measurements)
                 && app(OperationalProfileResolver::class)->isCardboardPackaging()) {
                 $company = CompanyMeasurementSettings::company();
@@ -159,7 +169,7 @@ class Product extends Model
 
     private static function hasInternalMeasurements(?array $measurements): bool
     {
-        return collect(['internal_length', 'internal_width', 'internal_height'])
+        return collect(\App\Support\CardboardMeasurements::INTERNAL_FIELDS)
             ->contains(fn (string $field): bool => filled($measurements[$field] ?? null));
     }
 }

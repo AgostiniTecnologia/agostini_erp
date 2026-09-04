@@ -9,6 +9,31 @@ use PHPUnit\Framework\TestCase;
 
 class CardboardMeasurementsTest extends TestCase
 {
+    public function test_empty_state_preserves_the_reactive_measurement_structure(): void
+    {
+        $measurements = CardboardMeasurements::emptyState();
+
+        $this->assertSame(
+            [
+                ...CardboardMeasurements::INTERNAL_FIELDS,
+                ...CardboardMeasurements::LENGTH_FIELDS,
+                ...CardboardMeasurements::WIDTH_FIELDS,
+            ],
+            array_keys($measurements),
+        );
+        $this->assertSame([], array_filter($measurements, fn (mixed $value): bool => $value !== null));
+
+        $recalculated = CardboardMeasurements::fromInternalDimensions(array_merge($measurements, [
+            'internal_length' => '100',
+            'internal_width' => '40',
+            'internal_height' => '20',
+        ]), 8, 70);
+
+        $this->assertSame('70', $recalculated['left_flap']);
+        $this->assertSame('108', $recalculated['sheet_length']);
+        $this->assertSame('28', $recalculated['top_flap']);
+    }
+
     #[DataProvider('validMeasurements')]
     public function test_it_normalizes_valid_measurements(mixed $input, ?string $expected): void
     {

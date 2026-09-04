@@ -11,28 +11,32 @@ class ProductController extends Controller
 {
     public function index(Request $request)
     {
-       $companyId = $request->user()->company_id;
+        $companyId = $request->user()->company_id;
 
         return response()->json(
             Product::where('company_id', $companyId)->get()
         );
     }
 
-     public function store(Request $request)
+    public function store(Request $request)
     {
-        
+
         $companyId = $request->user()->company_id;
 
         $data = $request->validate([
-            //'company_id' => 'required|uuid|exists:companies,uuid', // obrigatório e deve existir
+            // 'company_id' => 'required|uuid|exists:companies,uuid', // obrigatório e deve existir
             'name' => 'required|string',
-            'sku' => 'nullable|string|unique:products,sku',
+            'sku' => [
+                'nullable',
+                'string',
+                Rule::unique('products', 'sku')->where('company_id', $companyId),
+            ],
             'description' => 'nullable|string',
             'stock' => 'nullable|numeric',
             'unit_of_measure' => 'required|string',
             'standart_cost' => 'nullable|numeric',
             'sale_price' => 'nullable|numeric',
-            'minimum_sale_price' => 'nullable|numeric'
+            'minimum_sale_price' => 'nullable|numeric',
         ]);
 
         $data['company_id'] = $companyId;
@@ -44,8 +48,8 @@ class ProductController extends Controller
 
     public function show(Request $request, string $uuid)
     {
-       
-         $companyId = $request->user()->company_id;
+
+        $companyId = $request->user()->company_id;
 
         $product = Product::where('company_id', $companyId)
             ->where('uuid', $uuid)
@@ -53,7 +57,7 @@ class ProductController extends Controller
 
         return response()->json($product);
     }
-     
+
     public function update(Request $request, string $uuid)
     {
         $companyId = $request->user()->company_id;
@@ -63,19 +67,21 @@ class ProductController extends Controller
             ->firstOrFail();
 
         $data = $request->validate([
-            //'company_id' => 'required|uuid|exists:companies,uuid', // obrigatório e deve existir
+            // 'company_id' => 'required|uuid|exists:companies,uuid', // obrigatório e deve existir
             'name' => 'required|string',
-            'sku' =>  [
+            'sku' => [
                 'required',
                 'string',
-                rule::unique('products', 'sku')->ignore($uuid, 'uuid') //<- aqui ignora o usuário atual
+                Rule::unique('products', 'sku')
+                    ->where('company_id', $companyId)
+                    ->ignore($uuid, 'uuid'),
             ],
             'description' => 'nullable|string',
             'stock' => 'nullable|numeric',
             'unit_of_measure' => 'required|string',
             'standart_cost' => 'nullable|numeric',
             'sale_price' => 'nullable|numeric',
-            'minimum_sale_price' => 'nullable|numeric'
+            'minimum_sale_price' => 'nullable|numeric',
         ]);
 
         $product->update($data);
@@ -91,8 +97,8 @@ class ProductController extends Controller
             ->where('uuid', $uuid)
             ->firstOrFail();
 
-        $product-> delete();
+        $product->delete();
 
-        return response()->json(['message' => 'Produto removido com sucesso' ]);
+        return response()->json(['message' => 'Produto removido com sucesso']);
     }
 }
