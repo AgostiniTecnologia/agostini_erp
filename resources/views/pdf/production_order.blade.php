@@ -159,6 +159,7 @@
     </style>
 </head>
 <body>
+    @include('pdf.partials.system_footer')
     @include('pdf.partials.company_logo', ['company' => $order->company])
     <div class="container">
     <h1>Ordem de Produção: {{ $order->order_number }}</h1>

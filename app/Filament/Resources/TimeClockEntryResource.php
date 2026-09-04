@@ -216,7 +216,7 @@ class TimeClockEntryResource extends Resource
             ])
             ->headerActions([
                Tables\Actions\Action::make('Gerar Relatório RH')
-                ->label('Gerar Relatório RH')
+                ->label('Visualizar Relatório RH')
                 ->url(fn () => route('time.clock.pdf', [
                     'inicio' => now()->startOfMonth()->format('Y-m-d'),
                     'fim' => now()->endOfMonth()->format('Y-m-d'),

@@ -52,6 +52,6 @@ class FinanceReportController extends Controller
             'endDate'    => $endDate,
         ])->setPaper('a4', 'portrait');
 
-        return $pdf->download("relatorio_financeiro_{$startDate}_ate_{$endDate}.pdf");
+        return $pdf->stream("relatorio_financeiro_{$startDate}_ate_{$endDate}.pdf");
     }
 }

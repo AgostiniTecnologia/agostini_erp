@@ -28,7 +28,7 @@
             position: fixed;
         }
         .header { top: -5px; }
-        .footer { bottom: 0px; font-size: 8px; }
+        .footer { bottom: 18px; font-size: 8px; }
         .pagenum:before {
             content: "Página " counter(page);
         }
@@ -131,6 +131,7 @@
     </style>
 </head>
 <body>
+    @include('pdf.partials.system_footer')
     @include('pdf.partials.company_logo', ['company' => $order->company])
 <div class="footer">
     <span class="pagenum"></span>

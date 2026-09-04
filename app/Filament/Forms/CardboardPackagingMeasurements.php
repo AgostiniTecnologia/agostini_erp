@@ -3,7 +3,10 @@
 namespace App\Filament\Forms;
 
 use App\Support\CardboardMeasurements;
+use App\Support\CompanyMeasurementSettings;
 use Closure;
+use Filament\Forms\Components\Actions;
+use Filament\Forms\Components\Actions\Action;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\TextInput;
@@ -23,6 +26,16 @@ class CardboardPackagingMeasurements
                             self::measurement('internal_length', 'Comprimento interno', true),
                             self::measurement('internal_width', 'Largura interna', true),
                             self::measurement('internal_height', 'Altura interna', true),
+                            Actions::make([
+                                Action::make('clear_measurements')
+                                    ->label('Limpar medidas')
+                                    ->icon('heroicon-o-trash')
+                                    ->color('danger')
+                                    ->requiresConfirmation()
+                                    ->modalHeading('Limpar todas as medidas?')
+                                    ->modalDescription('As medidas internas e todos os cálculos automáticos serão removidos.')
+                                    ->action(fn (Set $set) => $set('cardboard_measurements', null)),
+                            ])->columnSpanFull(),
                         ])
                         ->columns(['default' => 1, 'md' => 3]),
                     Section::make('Composição do comprimento da chapa')
@@ -51,7 +64,7 @@ class CardboardPackagingMeasurements
                             $measurements = self::measurements($get);
                             $length = CardboardMeasurements::format(CardboardMeasurements::lengthTotal($measurements));
                             $width = CardboardMeasurements::format(CardboardMeasurements::widthTotal($measurements));
-                            $unit = auth()->user()?->company?->length_unit?->value ?? 'm';
+                            $unit = CompanyMeasurementSettings::lengthUnit();
 
                             return new HtmlString("<strong>{$length} × {$width} {$unit}</strong>");
                         })
@@ -64,9 +77,9 @@ class CardboardPackagingMeasurements
     {
         $input = TextInput::make("cardboard_measurements.{$name}")
             ->label($label)
-            ->suffix(fn (): string => auth()->user()?->company?->length_unit?->value ?? 'm')
+            ->suffix(fn (): string => CompanyMeasurementSettings::lengthUnit())
             ->inputMode('decimal')
-            ->live(debounce: 300)
+            ->live(onBlur: true)
             ->rule(static function (): Closure {
                 return static function (string $attribute, mixed $value, Closure $fail): void {
                     try {
@@ -103,7 +116,7 @@ class CardboardPackagingMeasurements
             ->content(function (Get $get) use ($fields): string {
                 return CardboardMeasurements::format(
                     CardboardMeasurements::total(self::measurements($get), $fields),
-                ).' '.(auth()->user()?->company?->length_unit?->value ?? 'm');
+                ).' '.CompanyMeasurementSettings::lengthUnit();
             });
     }
 
@@ -114,7 +127,7 @@ class CardboardPackagingMeasurements
 
     private static function recalculate(Get $get, Set $set): void
     {
-        $company = auth()->user()?->company;
+        $company = CompanyMeasurementSettings::company();
         $calculated = CardboardMeasurements::fromInternalDimensions(
             self::measurements($get),
             $company?->fold_margin ?? 5,

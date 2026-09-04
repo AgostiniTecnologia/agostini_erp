@@ -26,6 +26,7 @@ class DashboardProduction extends \Filament\Pages\Page
         // O botão "Gerar Relatório" agora é uma Action do Filament
         return [
             Action::make('Gerar Relatório')
+                ->label('Visualizar Relatório')
                 ->button()
                 ->color('primary')
                 ->icon('heroicon-o-document-text')
@@ -41,6 +42,7 @@ class DashboardProduction extends \Filament\Pages\Page
                     $jsScript = <<<JS
                         (async () => {
                             const token = '{$token}';
+                            const previewWindow = window.open('', '_blank');
                             const res = await fetch('/api/ai/production/generate-pdf', {
                                 method: 'POST',
                                 headers: {
@@ -50,18 +52,18 @@ class DashboardProduction extends \Filament\Pages\Page
                                 }
                             });
                             if (!res.ok) {
+                                if (previewWindow) previewWindow.close();
                                 alert('Erro ao gerar PDF: ' + res.statusText);
                                 return;
                             }
                             const blob = await res.blob();
                             const url = window.URL.createObjectURL(blob);
-                            const a = document.createElement('a');
-                            a.href = url;
-                            a.download = 'production_report.pdf';
-                            document.body.appendChild(a);
-                            a.click();
-                            a.remove();
-                            window.URL.revokeObjectURL(url);
+                            if (previewWindow) {
+                                previewWindow.location.href = url;
+                            } else {
+                                window.open(url, '_blank');
+                            }
+                            window.setTimeout(() => window.URL.revokeObjectURL(url), 60000);
                         })();
                     JS;
 

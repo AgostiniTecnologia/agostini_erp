@@ -7,6 +7,7 @@ use App\Models\Company;
 use App\Models\Product;
 use App\Models\User;
 use App\Services\OperationalProfileResolver;
+use App\Support\CompanyMeasurementSettings;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -116,11 +117,42 @@ class OperationalProfileTest extends TestCase
 
         $measurements = $product->fresh()->cardboard_measurements;
         $this->assertSame('70', $measurements['left_flap']);
-        $this->assertSame('28', $measurements['left_height']);
+        $this->assertSame('20', $measurements['left_height']);
         $this->assertSame('108', $measurements['sheet_length']);
         $this->assertSame('28', $measurements['top_flap']);
-        $this->assertSame('36', $measurements['top_height']);
+        $this->assertSame('28', $measurements['top_height']);
         $this->assertSame('48', $measurements['sheet_width']);
+    }
+
+    public function test_measurement_units_are_read_from_the_current_company(): void
+    {
+        $company = Company::factory()->create([
+            'length_unit' => 'mm',
+            'weight_unit' => 'g',
+        ]);
+        $this->actingAs(User::factory()->for($company)->create());
+
+        $this->assertSame('mm', CompanyMeasurementSettings::lengthUnit());
+        $this->assertSame('g', CompanyMeasurementSettings::weightUnit());
+    }
+
+    public function test_clearing_internal_measurements_does_not_recreate_automatic_values(): void
+    {
+        $company = Company::factory()->create([
+            'operational_profile' => OperationalProfile::CardboardPackaging,
+        ]);
+        $this->actingAs(User::factory()->for($company)->create());
+        $product = Product::factory()->forCompany($company)->create([
+            'cardboard_measurements' => [
+                'internal_length' => '100',
+                'internal_width' => '40',
+                'internal_height' => '20',
+            ],
+        ]);
+
+        $product->update(['cardboard_measurements' => null]);
+
+        $this->assertNull($product->fresh()->cardboard_measurements);
     }
 
     public function test_tenant_scope_prevents_measurements_from_appearing_in_another_company(): void

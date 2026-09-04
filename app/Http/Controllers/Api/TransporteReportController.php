@@ -27,6 +27,6 @@ class TransporteReportController extends Controller
         $pdf = Pdf::loadView('reports.transporte_relatorio_pdf', $dados)
             ->setPaper('a4', 'portrait');
 
-        return $pdf->download('relatorio-transporte.pdf');
+        return $pdf->stream('relatorio-transporte.pdf');
     }
 }

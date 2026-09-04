@@ -15,6 +15,7 @@
     </style>
 </head>
 <body>
+    @include('pdf.partials.system_footer')
     @include('pdf.partials.company_logo')
     <div class="header">
          <h1>Tabela de Precificação</h1>

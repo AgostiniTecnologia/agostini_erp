@@ -24,6 +24,7 @@
     </style>
 </head>
 <body>
+    @include('pdf.partials.system_footer')
     @include('pdf.partials.company_logo')
 
     <h1>🎯 Relatório Consultor Inteligente de Vendas</h1>

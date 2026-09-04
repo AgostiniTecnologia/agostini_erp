@@ -32,7 +32,5 @@ class DashboardProductionPdfController extends Controller
         $pdf->setPaper('a4', 'landscape');
 
         return $pdf->stream('dashboard_producao_'.now()->format('Ymd_His').'.pdf');
-        // Ou para download direto:
-        // return $pdf->download('dashboard_producao_'.now()->format('Ymd_His').'.pdf');
     }
 }

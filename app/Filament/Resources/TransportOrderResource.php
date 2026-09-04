@@ -210,8 +210,8 @@ class TransportOrderResource extends Resource
                         return $record->status === TransportOrder::STATUS_PENDING && $record->items->isNotEmpty();
                     }),
                 Action::make('downloadShipmentPdf')
-                    ->label('Imprimir Documento')
-                    ->icon('heroicon-o-printer')
+                    ->label('Visualizar Documento')
+                    ->icon('heroicon-o-eye')
                     ->color('info')
                     ->url(fn(TransportOrder $record): string => route('transport-orders.pdf', ['uuid' => $record->uuid]))
                     ->openUrlInNewTab()
@@ -262,4 +262,3 @@ class TransportOrderResource extends Resource
             ]);
     }
 }
-

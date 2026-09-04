@@ -218,9 +218,9 @@ class PricingTableResource extends Resource
                     ])
                 ->headerActions([
                     Action::make('Gerar PDF')
-                        ->label('Gerar PDF')
+                        ->label('Visualizar PDF')
                         ->color('primary')
-                        ->icon('heroicon-o-arrow-down-tray')
+                        ->icon('heroicon-o-eye')
                         ->url(fn () => route('pricing-table.pdf')) // usa a rota que criamos
                         ->openUrlInNewTab(), // abre em nova aba
                 ]);

@@ -154,7 +154,7 @@ class RelatoriosCargas extends Page implements HasForms
             //  BOTÃO NOVO → BAIXAR RELATÓRIO DE TRANSPORTE
             // ============================================
             \Filament\Actions\Action::make('baixar_relatorio_transporte')
-                ->label('Baixar Relatório')
+                ->label('Visualizar Relatório')
                 ->icon('heroicon-o-printer')
                 ->color('primary')
                 ->action(function () {

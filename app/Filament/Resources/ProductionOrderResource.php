@@ -184,8 +184,8 @@ class ProductionOrderResource extends Resource
             ])
             ->actions([
                 Tables\Actions\Action::make('pdf')
-                    ->label('PDF')
-                    ->icon('heroicon-o-document-arrow-down')
+                    ->label('Visualizar PDF')
+                    ->icon('heroicon-o-eye')
                     ->color('info')
                     ->url(fn (ProductionOrder $record): string => route('production-orders.pdf', $record->uuid))
                     ->openUrlInNewTab(),

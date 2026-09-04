@@ -169,8 +169,8 @@ class FinancialDashboard extends Page implements HasForms
     {
         return [
         Actions\Action::make('print')
-            ->label('Imprimir PDF')
-            ->icon('heroicon-o-printer')
+            ->label('Visualizar PDF')
+            ->icon('heroicon-o-eye')
             ->color('gray')
             ->url(route('financial.report.pdf', [
                 'start_date' => Carbon::parse($this->data['startDate'])->format('Y-m-d'),
@@ -178,7 +178,7 @@ class FinancialDashboard extends Page implements HasForms
             ]), shouldOpenInNewTab: true),
 
         Actions\Action::make('baixar_relatorio_financeiro')
-            ->label('Baixar Relatório')
+            ->label('Visualizar Relatório')
             ->icon('heroicon-o-printer')
             ->color('primary')
             ->action(function () {

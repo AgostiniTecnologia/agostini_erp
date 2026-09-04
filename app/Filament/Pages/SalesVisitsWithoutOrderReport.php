@@ -113,8 +113,8 @@ class SalesVisitsWithoutOrderReport extends Page implements HasForms
     {
         return [
             Actions\Action::make('print')
-                ->label('Imprimir PDF')
-                ->icon('heroicon-o-printer')
+                ->label('Visualizar PDF')
+                ->icon('heroicon-o-eye')
                 ->color('gray')
                 ->url(route('visits.without.order.pdf', [
                     'start_date' => Carbon::parse($this->start_date)->format('Y-m-d'),

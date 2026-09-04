@@ -59,14 +59,14 @@ class CardboardMeasurements
 
         return array_merge($measurements, [
             'left_flap' => self::normalizedNumber($lengthFlap),
-            'left_height' => self::normalizedNumber($height + $margin),
+            'left_height' => self::normalizedNumber($height),
             'sheet_length' => self::normalizedNumber($length + $margin),
-            'right_height' => self::normalizedNumber($height + $margin),
+            'right_height' => self::normalizedNumber($height),
             'right_flap' => self::normalizedNumber($lengthFlap),
             'top_flap' => self::normalizedNumber(($width / 2) + $margin),
-            'top_height' => self::normalizedNumber($height + ($margin * 2)),
+            'top_height' => self::normalizedNumber($height + $margin),
             'sheet_width' => self::normalizedNumber($width + $margin),
-            'bottom_height' => self::normalizedNumber($height + ($margin * 2)),
+            'bottom_height' => self::normalizedNumber($height + $margin),
             'bottom_flap' => self::normalizedNumber(($width / 2) + $margin),
         ]);
     }

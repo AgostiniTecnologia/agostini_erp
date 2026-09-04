@@ -17,8 +17,8 @@ class EditSalesOrder extends EditRecord
     {
         return [
             Actions\Action::make('generatePdf')
-                ->label('Gerar PDF')
-                ->icon('heroicon-o-document-arrow-down')
+                ->label('Visualizar PDF')
+                ->icon('heroicon-o-eye')
                 ->color('info')
                 ->url(fn (SalesOrder $record): string => route('sales-orders.pdf', $record->uuid))
                 ->openUrlInNewTab(),

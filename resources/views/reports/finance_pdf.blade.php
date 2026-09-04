@@ -16,6 +16,7 @@
     </style>
 </head>
 <body>
+    @include('pdf.partials.system_footer')
     @include('pdf.partials.company_logo')
     <h2>Relatório Financeiro</h2>
     <p>Período: {{ \Carbon\Carbon::parse($startDate)->format('d/m/Y') }} até {{ \Carbon\Carbon::parse($endDate)->format('d/m/Y') }}</p>

@@ -113,6 +113,7 @@
     </style>
 </head>
 <body>
+@include('pdf.partials.system_footer')
 @include('pdf.partials.company_logo')
 <div class="container">
     <h1>Dashboard de Produção</h1>

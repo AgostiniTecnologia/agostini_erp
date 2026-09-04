@@ -15,6 +15,6 @@ class PricingTablePdfController extends Controller
         $pdf = Pdf::loadView('pdf.pricing_table_pdf', compact('pricingTables'))
                   ->setPaper('a4', 'landscape'); // papel A4, orientação paisagem
 
-        return $pdf->download('precificacao.pdf'); // força download do PDF
+        return $pdf->stream('precificacao.pdf');
     }
 }

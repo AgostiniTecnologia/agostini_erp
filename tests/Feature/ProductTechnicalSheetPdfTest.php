@@ -14,7 +14,7 @@ class ProductTechnicalSheetPdfTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_authorized_user_can_download_product_technical_sheet(): void
+    public function test_authorized_user_can_preview_product_technical_sheet(): void
     {
         $company = Company::factory()->create([
             'operational_profile' => OperationalProfile::CardboardPackaging,
@@ -42,11 +42,11 @@ class ProductTechnicalSheetPdfTest extends TestCase
 
         $response->assertOk();
         $response->assertHeader('content-type', 'application/pdf');
-        $response->assertDownload('ficha-tecnica-caixa-modelo-a.pdf');
+        $response->assertHeader('content-disposition', 'inline; filename=ficha-tecnica-caixa-modelo-a.pdf');
         $this->assertStringStartsWith('%PDF', $response->getContent());
     }
 
-    public function test_user_cannot_download_product_from_another_company(): void
+    public function test_user_cannot_preview_product_from_another_company(): void
     {
         $firstCompany = Company::factory()->create();
         $secondCompany = Company::factory()->create();

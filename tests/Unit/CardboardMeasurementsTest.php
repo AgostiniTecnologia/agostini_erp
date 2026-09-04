@@ -74,12 +74,12 @@ class CardboardMeasurementsTest extends TestCase
         ], 5, 60);
 
         $this->assertSame('60', $measurements['left_flap']);
-        $this->assertSame('102', $measurements['left_height']);
+        $this->assertSame('97', $measurements['left_height']);
         $this->assertSame('1747', $measurements['sheet_length']);
         $this->assertSame('202.5', $measurements['top_flap']);
-        $this->assertSame('107', $measurements['top_height']);
+        $this->assertSame('102', $measurements['top_height']);
         $this->assertSame('400', $measurements['sheet_width']);
-        $this->assertSame(2071.0, CardboardMeasurements::lengthTotal($measurements));
-        $this->assertSame(1019.0, CardboardMeasurements::widthTotal($measurements));
+        $this->assertSame(2061.0, CardboardMeasurements::lengthTotal($measurements));
+        $this->assertSame(1009.0, CardboardMeasurements::widthTotal($measurements));
     }
 }

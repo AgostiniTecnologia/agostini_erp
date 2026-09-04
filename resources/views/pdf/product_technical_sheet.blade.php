@@ -19,6 +19,7 @@
     </style>
 </head>
 <body>
+    @include('pdf.partials.system_footer')
     @include('pdf.partials.company_logo', ['company' => $product->company])
     @php
         $measurements = $product->cardboard_measurements ?? [];

@@ -1,5 +1,7 @@
 @php
-    $reportCompany = $company ?? auth()->user()?->company;
+    $reportCompany = isset($company)
+        ? ($company->exists ? ($company->fresh() ?? $company) : $company)
+        : \App\Support\CompanyMeasurementSettings::company();
     $logoSrc = $reportCompany?->reportLogoDataUri() ?? \App\Models\Company::defaultReportLogoDataUri();
 @endphp
 <header style="margin-bottom: 12px;">

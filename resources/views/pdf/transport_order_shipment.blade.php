@@ -114,6 +114,7 @@
     </style>
 </head>
 <body>
+    @include('pdf.partials.system_footer')
     @include('pdf.partials.company_logo', ['company' => $transportOrder->company])
 <div class="container">
     <div class="header">

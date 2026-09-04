@@ -28,6 +28,6 @@ class TimeClockReportController extends Controller
         $pdf = Pdf::loadView('reports.time_clock_pdf', $data)
             ->setPaper('a4', 'portrait');
 
-        return $pdf->download('relatorio-consultor-rh.pdf');
+        return $pdf->stream('relatorio-consultor-rh.pdf');
     }
 }

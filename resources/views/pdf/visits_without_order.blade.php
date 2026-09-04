@@ -17,6 +17,7 @@
     </style>
 </head>
 <body>
+    @include('pdf.partials.system_footer')
     @include('pdf.partials.company_logo')
 <div class="header">
     <h1>Relatório de Visitas sem Pedido</h1>

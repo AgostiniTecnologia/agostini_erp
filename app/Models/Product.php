@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Models\Scopes\TenantScope;
 use App\Services\OperationalProfileResolver;
+use App\Support\CompanyMeasurementSettings;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -125,8 +126,9 @@ class Product extends Model
                 unset($model->cardboard_measurements);
             }
 
-            if ($model->cardboard_measurements && app(OperationalProfileResolver::class)->isCardboardPackaging()) {
-                $company = Auth::user()?->company;
+            if (self::hasInternalMeasurements($model->cardboard_measurements)
+                && app(OperationalProfileResolver::class)->isCardboardPackaging()) {
+                $company = CompanyMeasurementSettings::company();
                 $model->cardboard_measurements = \App\Support\CardboardMeasurements::fromInternalDimensions(
                     $model->cardboard_measurements,
                     $company?->fold_margin ?? 5,
@@ -143,8 +145,9 @@ class Product extends Model
             }
 
             if ($product->isDirty('cardboard_measurements')
+                && self::hasInternalMeasurements($product->cardboard_measurements)
                 && app(OperationalProfileResolver::class)->isCardboardPackaging()) {
-                $company = Auth::user()?->company;
+                $company = CompanyMeasurementSettings::company();
                 $product->cardboard_measurements = \App\Support\CardboardMeasurements::fromInternalDimensions(
                     $product->cardboard_measurements ?? [],
                     $company?->fold_margin ?? 5,
@@ -152,5 +155,11 @@ class Product extends Model
                 );
             }
         });
+    }
+
+    private static function hasInternalMeasurements(?array $measurements): bool
+    {
+        return collect(['internal_length', 'internal_width', 'internal_height'])
+            ->contains(fn (string $field): bool => filled($measurements[$field] ?? null));
     }
 }

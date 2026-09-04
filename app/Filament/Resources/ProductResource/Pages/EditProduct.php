@@ -15,8 +15,8 @@ class EditProduct extends EditRecord
     {
         return [
             Actions\Action::make('downloadTechnicalSheet')
-                ->label('Baixar ficha técnica')
-                ->icon('heroicon-o-document-arrow-down')
+                ->label('Visualizar ficha técnica')
+                ->icon('heroicon-o-eye')
                 ->color('info')
                 ->url(fn (Product $record): string => route('products.technical-sheet.pdf', $record->uuid))
                 ->openUrlInNewTab(),

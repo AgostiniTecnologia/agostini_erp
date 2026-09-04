@@ -7,6 +7,7 @@ use App\Filament\Resources\ProductResource\Pages;
 use App\Filament\Resources\ProductResource\RelationManagers;
 use App\Models\Product;
 use App\Services\OperationalProfileResolver;
+use App\Support\CompanyMeasurementSettings;
 use Filament\Forms;
 use Filament\Forms\Components\Tabs;
 use Filament\Forms\Form;
@@ -256,11 +257,11 @@ class ProductResource extends Resource
 
     private static function lengthUnit(): string
     {
-        return auth()->user()?->company?->length_unit?->value ?? 'm';
+        return CompanyMeasurementSettings::lengthUnit();
     }
 
     private static function weightUnit(): string
     {
-        return auth()->user()?->company?->weight_unit?->value ?? 'kg';
+        return CompanyMeasurementSettings::weightUnit();
     }
 }

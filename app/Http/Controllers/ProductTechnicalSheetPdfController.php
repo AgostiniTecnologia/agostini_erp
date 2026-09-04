@@ -26,6 +26,6 @@ class ProductTechnicalSheetPdfController extends Controller
 
         $name = Str::slug($product->name) ?: $product->uuid;
 
-        return $pdf->download("ficha-tecnica-{$name}.pdf");
+        return $pdf->stream("ficha-tecnica-{$name}.pdf");
     }
 }

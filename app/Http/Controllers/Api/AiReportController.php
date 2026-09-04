@@ -93,7 +93,7 @@ class AiReportController extends Controller
 
             $pdf = PDF::loadView('reports.production_ai_complete', $viewData)->setPaper('a4','portrait');
 
-            return $pdf->download('production_report_complete_' . now()->format('Ymd_His') . '.pdf');
+            return $pdf->stream('production_report_complete_' . now()->format('Ymd_His') . '.pdf');
         } catch (\Exception $e) {
             Log::error('Erro ao gerar relatório IA: ' . $e->getMessage());
             return response()->json(['error' => 'Erro ao gerar relatório: ' . $e->getMessage()], 500);
