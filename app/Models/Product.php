@@ -47,6 +47,8 @@ class Product extends Model
         'width',
         'height',
         'cardboard_measurements',
+        'fold_margin',
+        'length_flap_default',
     ];
 
     /**
@@ -59,6 +61,8 @@ class Product extends Model
         'sale_price' => 'decimal:2',
         'minimum_sale_price' => 'decimal:2',
         'cardboard_measurements' => 'array',
+        'fold_margin' => 'decimal:3',
+        'length_flap_default' => 'decimal:3',
     ];
 
     // --- RELAÇÕES ---
@@ -124,6 +128,8 @@ class Product extends Model
 
             if (Auth::check() && ! app(OperationalProfileResolver::class)->isCardboardPackaging()) {
                 unset($model->cardboard_measurements);
+                unset($model->fold_margin);
+                unset($model->length_flap_default);
             }
 
             if (! self::hasInternalMeasurements($model->cardboard_measurements)) {
@@ -133,10 +139,10 @@ class Product extends Model
             if (self::hasInternalMeasurements($model->cardboard_measurements)
                 && app(OperationalProfileResolver::class)->isCardboardPackaging()) {
                 $company = CompanyMeasurementSettings::company();
-                $model->cardboard_measurements = \App\Support\CardboardMeasurements::fromInternalDimensions(
+                $model->cardboard_measurements = \App\Support\CardboardMeasurements::fillMissingComposition(
                     $model->cardboard_measurements,
-                    $company?->fold_margin ?? 5,
-                    $company?->length_flap_default ?? 60,
+                    $model->fold_margin ?? $company?->fold_margin ?? 5,
+                    $model->length_flap_default ?? $company?->length_flap_default ?? 60,
                 );
             }
         });
@@ -146,6 +152,14 @@ class Product extends Model
                 && $product->isDirty('cardboard_measurements')
                 && ! app(OperationalProfileResolver::class)->isCardboardPackaging()) {
                 $product->cardboard_measurements = $product->getOriginal('cardboard_measurements');
+            }
+
+            if (Auth::check() && ! app(OperationalProfileResolver::class)->isCardboardPackaging()) {
+                foreach (['fold_margin', 'length_flap_default'] as $setting) {
+                    if ($product->isDirty($setting)) {
+                        $product->{$setting} = $product->getOriginal($setting);
+                    }
+                }
             }
 
             if ($product->isDirty('cardboard_measurements')
@@ -158,10 +172,10 @@ class Product extends Model
                 && self::hasInternalMeasurements($product->cardboard_measurements)
                 && app(OperationalProfileResolver::class)->isCardboardPackaging()) {
                 $company = CompanyMeasurementSettings::company();
-                $product->cardboard_measurements = \App\Support\CardboardMeasurements::fromInternalDimensions(
+                $product->cardboard_measurements = \App\Support\CardboardMeasurements::fillMissingComposition(
                     $product->cardboard_measurements ?? [],
-                    $company?->fold_margin ?? 5,
-                    $company?->length_flap_default ?? 60,
+                    $product->fold_margin ?? $company?->fold_margin ?? 5,
+                    $product->length_flap_default ?? $company?->length_flap_default ?? 60,
                 );
             }
         });

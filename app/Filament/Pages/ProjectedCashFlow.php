@@ -222,6 +222,37 @@ public function downloadPreviousYearReport()
         }
     }
 
+    public function clearTable(): void
+    {
+        $companyId = Auth::user()?->company_id;
+
+        if (! $companyId) {
+            Notification::make()
+                ->title('Empresa não identificada')
+                ->danger()
+                ->send();
+
+            return;
+        }
+
+        $deleted = CashFlow::query()
+            ->where('company_id', $companyId)
+            ->where(function (Builder $query): void {
+                $query->whereIn('month', $this->monthStrings)
+                    ->orWhere('month', 'goal')
+                    ->orWhere('category', 'goal');
+            })
+            ->delete();
+
+        $this->loadCashFlowsMap();
+
+        Notification::make()
+            ->title('Tabela limpa com sucesso')
+            ->body("{$deleted} registro(s) do ano atual foram removidos.")
+            ->success()
+            ->send();
+    }
+
     public function updateMetaCell(string $accountUuid, $rawValue): void
     {
         $value = $this->normalizeNumber($rawValue);

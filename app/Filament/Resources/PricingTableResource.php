@@ -13,8 +13,6 @@ use Filament\Tables\Table;
 use Filament\Tables\Filters\TrashedFilter;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Illuminate\Database\Eloquent\Builder;
-use Filament\Tables\Actions\Action;
-use Barryvdh\DomPDF\Facade\Pdf;
 
 class PricingTableResource extends Resource
 {
@@ -215,15 +213,7 @@ class PricingTableResource extends Resource
                     Tables\Actions\ForceDeleteBulkAction::make(),
                     Tables\Actions\RestoreBulkAction::make()
                     ])
-                    ])
-                ->headerActions([
-                    Action::make('Gerar PDF')
-                        ->label('Visualizar PDF')
-                        ->color('primary')
-                        ->icon('heroicon-o-eye')
-                        ->url(fn () => route('pricing-table.pdf')) // usa a rota que criamos
-                        ->openUrlInNewTab(), // abre em nova aba
-                ]);
+                    ]);
                 
         }
 

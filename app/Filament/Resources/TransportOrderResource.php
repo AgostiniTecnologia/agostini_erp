@@ -2,24 +2,25 @@
 
 namespace App\Filament\Resources;
 
-use App\Filament\Resources\TransportOrderResource\RelationManagers\ItemsRelationManager;
 use App\Filament\Resources\TransportOrderResource\Pages;
+use App\Filament\Resources\TransportOrderResource\RelationManagers\ItemsRelationManager;
 use App\Models\TransportOrder;
+use App\Services\RouteOptimizationService;
 // Imports não utilizados foram comentados para clareza, mas podem ser necessários para outras partes do seu código.
 // use App\Models\User;
 // use App\Models\Vehicle;
 // use Barryvdh\DomPDF\Facade\Pdf;
-use Filament\Forms\Components\Tabs;
+use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
+use Filament\Tables;
 use Filament\Tables\Actions\Action;
 use Filament\Tables\Table;
-use Filament\Forms;
-use Filament\Tables;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;  // Adicionado para type hint
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+
 // use Illuminate\Support\Carbon;
 
 class TransportOrderResource extends Resource
@@ -41,7 +42,7 @@ class TransportOrderResource extends Resource
         return $form
             ->schema([
                 Forms\Components\Group::make()
-                    ->disabled(fn(?Model $record): bool => $record instanceof TransportOrder && $record->status === TransportOrder::STATUS_COMPLETED)
+                    ->disabled(fn (?Model $record): bool => $record instanceof TransportOrder && $record->status === TransportOrder::STATUS_COMPLETED)
                     ->schema([
                         Forms\Components\TextInput::make('transport_order_number')
                             ->label('Número da OT')
@@ -65,18 +66,18 @@ class TransportOrderResource extends Resource
                                 ->live(),
                             Forms\Components\Select::make('vehicle_id')
                                 ->label('Veículo')
-                                ->relationship('vehicle', 'license_plate', fn(Builder $query) => $query->where('is_active', true))
+                                ->relationship('vehicle', 'license_plate', fn (Builder $query) => $query->where('is_active', true))
                                 ->searchable(['license_plate', 'description'])
                                 ->preload(),
                             Forms\Components\Select::make('driver_id')
                                 ->label('Motorista')
-                                ->relationship('driver', 'name', fn(Builder $query) => $query->where('is_active', true)->where('company_id', auth()->user()->company_id)->whereHas('roles', fn($q) => $q->whereIn('name', ['Motorista', config('filament-shield.super_admin.name')])))
+                                ->relationship('driver', 'name', fn (Builder $query) => $query->where('is_active', true)->where('company_id', auth()->user()->company_id)->whereHas('roles', fn ($q) => $q->whereIn('name', ['Motorista', config('filament-shield.super_admin.name')])))
                                 ->searchable()
                                 ->preload(),
                         ]),
                     ]),
                 Forms\Components\Group::make()
-                    ->disabled(fn(?Model $record): bool => $record instanceof TransportOrder && $record->status === TransportOrder::STATUS_COMPLETED)
+                    ->disabled(fn (?Model $record): bool => $record instanceof TransportOrder && $record->status === TransportOrder::STATUS_COMPLETED)
                     ->schema([
                         Forms\Components\Grid::make(2)->schema([
                             Forms\Components\DateTimePicker::make('planned_departure_datetime')
@@ -98,7 +99,7 @@ class TransportOrderResource extends Resource
                         ]),
                     ]),
                 Forms\Components\Group::make()
-                    ->disabled(fn(?Model $record): bool => $record instanceof TransportOrder && $record->status === TransportOrder::STATUS_COMPLETED)
+                    ->disabled(fn (?Model $record): bool => $record instanceof TransportOrder && $record->status === TransportOrder::STATUS_COMPLETED)
                     ->columnSpanFull()
                     ->schema([
                         Forms\Components\Textarea::make('notes')
@@ -108,7 +109,7 @@ class TransportOrderResource extends Resource
                     ]),
                 Forms\Components\Group::make()
                     ->columnSpanFull()
-                    ->visible(fn(callable $get) => $get('status') === TransportOrder::STATUS_CANCELLED)
+                    ->visible(fn (callable $get) => $get('status') === TransportOrder::STATUS_CANCELLED)
                     ->schema([
                         Forms\Components\Textarea::make('cancellation_reason')
                             ->label('Motivo do Cancelamento')
@@ -122,7 +123,7 @@ class TransportOrderResource extends Resource
                         Forms\Components\Select::make('cancelled_by_user_id')
                             ->label('Cancelado Por')
                             ->relationship('cancelledBy', 'name')
-                            ->default(fn() => auth()->id())
+                            ->default(fn () => auth()->id())
                             ->disabled()
                             ->dehydrated(),
                     ]),
@@ -140,7 +141,7 @@ class TransportOrderResource extends Resource
                 Tables\Columns\TextColumn::make('status')
                     ->label('Status')
                     ->badge()
-                    ->color(fn(string $state): string => match ($state) {
+                    ->color(fn (string $state): string => match ($state) {
                         TransportOrder::STATUS_PENDING => 'warning',
                         TransportOrder::STATUS_APPROVED => 'info',
                         TransportOrder::STATUS_IN_PROGRESS => 'primary',
@@ -148,7 +149,7 @@ class TransportOrderResource extends Resource
                         TransportOrder::STATUS_CANCELLED => 'danger',
                         default => 'gray',
                     })
-                    ->formatStateUsing(fn(string $state): string => match ($state) {
+                    ->formatStateUsing(fn (string $state): string => match ($state) {
                         TransportOrder::STATUS_PENDING => 'Pendente',
                         TransportOrder::STATUS_APPROVED => 'Aprovada',
                         TransportOrder::STATUS_IN_PROGRESS => 'Em Andamento',
@@ -192,6 +193,7 @@ class TransportOrderResource extends Resource
                     ->color('success')
                     ->action(function (TransportOrder $record) {
                         if ($record->status === TransportOrder::STATUS_PENDING) {
+                            app(RouteOptimizationService::class)->calculateSequence($record);
                             $record->update(['status' => TransportOrder::STATUS_APPROVED]);
                             Notification::make()
                                 ->title('Ordem Aprovada')
@@ -207,25 +209,19 @@ class TransportOrderResource extends Resource
                     })
                     ->visible(function (TransportOrder $record): bool {  // MODIFICADO AQUI
                         $record->loadMissing('items');
+
                         return $record->status === TransportOrder::STATUS_PENDING && $record->items->isNotEmpty();
                     }),
                 Action::make('downloadShipmentPdf')
                     ->label('Visualizar Documento')
                     ->icon('heroicon-o-eye')
                     ->color('info')
-                    ->url(fn(TransportOrder $record): string => route('transport-orders.pdf', ['uuid' => $record->uuid]))
+                    ->url(fn (TransportOrder $record): string => route('transport-orders.pdf', ['uuid' => $record->uuid]))
                     ->openUrlInNewTab()
                     ->visible(function (TransportOrder $record): bool {
                         $record->loadMissing('items');
-                        if ($record->items->isEmpty()) {
-                            return false;
-                        }
-                        foreach ($record->items as $item) {
-                            if (is_null($item->delivery_sequence)) {
-                                return false;
-                            }
-                        }
-                        return true;
+
+                        return $record->items->isNotEmpty();
                     }),
             ])
             ->bulkActions([

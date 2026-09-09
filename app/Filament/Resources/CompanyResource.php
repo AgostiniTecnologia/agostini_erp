@@ -248,6 +248,12 @@ class CompanyResource extends Resource
                                         ->label('Longitude')
                                         ->readOnly(), // Mantido readOnly
                                     Map::make('map_visualization')
+                                        ->dehydrated(false)
+                                        ->afterStateHydrated(function ($component, Get $get) {
+                                            if (is_numeric($get('latitude')) && is_numeric($get('longitude'))) {
+                                                $component->state(['lat' => (float) $get('latitude'), 'lng' => (float) $get('longitude')]);
+                                            }
+                                        })
                                         ->label('Localização')
                                         ->columnSpanFull()
                                         ->height('400px')

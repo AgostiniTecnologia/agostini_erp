@@ -46,9 +46,14 @@
     </form>
 </div>
 
-{{-- Inclua a API do Google Maps. Substitua YOUR_GOOGLE_MAPS_API_KEY pela sua chave --}}
-<script async defer src="https://maps.googleapis.com/maps/api/js?key={{ env('GOOGLE_MAPS_API_KEY') }}&callback=initMap"></script>
 <script>
+    window.gm_authFailure = function () {
+        document.getElementById('loading-message').style.display = 'none';
+        const error = document.getElementById('error-message');
+        error.style.display = 'block';
+        error.textContent = 'Não foi possível carregar o Google Maps. Verifique a chave e a ativação da API.';
+        document.getElementById('timeClockForm').style.display = 'none';
+    };
     let userMarker;
     let mapInstance;
 
@@ -141,5 +146,10 @@
     };
     @endif
 </script>
+@if(config('filament-google-maps.keys.web_key'))
+<script async src="https://maps.googleapis.com/maps/api/js?key={{ config('filament-google-maps.keys.web_key') }}&loading=async&callback=initMap" onerror="window.gm_authFailure()"></script>
+@else
+<script>window.gm_authFailure();</script>
+@endif
 </body>
 </html>

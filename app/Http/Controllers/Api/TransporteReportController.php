@@ -2,12 +2,10 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Models\TransportOrder;
-use App\Models\TransportOrderItem;
+use App\Http\Controllers\Controller;
 use App\Services\TransporteRelatorioService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
-use App\Http\Controllers\Controller;
 
 class TransporteReportController extends Controller
 {
@@ -22,6 +20,7 @@ class TransporteReportController extends Controller
     {
         // Busca completa
         $dados = $this->service->gerarRelatorioCompleto($request);
+        $dados['company'] = $request->user()->company;
 
         // Gera PDF
         $pdf = Pdf::loadView('reports.transporte_relatorio_pdf', $dados)

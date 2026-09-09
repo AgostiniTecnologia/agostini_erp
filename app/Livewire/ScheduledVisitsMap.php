@@ -3,28 +3,32 @@
 namespace App\Livewire;
 
 use App\Models\SalesVisit;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
-use Carbon\Carbon;
 
 class ScheduledVisitsMap extends Component
 {
     public array $visitsForMap = [];
+
     public array $visitsForList = [];
+
     public ?string $googleMapsApiKey;
+
     public string $viewMode = 'map';
 
     public function mount(): void
     {
-        $this->googleMapsApiKey = config('filament-google-maps.key');
+        $this->googleMapsApiKey = config('filament-google-maps.keys.web_key');
         $this->loadScheduledVisits();
     }
 
     public function loadScheduledVisits(): void
     {
         $user = Auth::user();
-        if (!$user) {
+        if (! $user) {
             $this->visitsForMap = [];
+
             return;
         }
 
@@ -39,16 +43,16 @@ class ScheduledVisitsMap extends Component
 
         $this->visitsForList = $visits->filter(function ($visit) {
             return $visit->client;
-        })->map(function (SalesVisit $visit) use ($today, $sevenDaysFromNow){
+        })->map(function (SalesVisit $visit) use ($sevenDaysFromNow) {
             $scheduledAt = Carbon::parse($visit->scheduled_at);
             $markerCategory = 'default';
 
-            if($visit->status === SalesVisit::STATUS_IN_PROGRESS){
+            if ($visit->status === SalesVisit::STATUS_IN_PROGRESS) {
                 $markerCategory = 'warning';
-            } elseif($visit->status === SalesVisit::STATUS_SCHEDULED){
-                if($scheduledAt->isPast() || $scheduledAt->isToday()){
+            } elseif ($visit->status === SalesVisit::STATUS_SCHEDULED) {
+                if ($scheduledAt->isPast() || $scheduledAt->isToday()) {
                     $markerCategory = 'danger';
-                } elseif ($scheduledAt->gt($sevenDaysFromNow)){
+                } elseif ($scheduledAt->gt($sevenDaysFromNow)) {
                     $markerCategory = 'gray';
                 }
             }
@@ -70,7 +74,7 @@ class ScheduledVisitsMap extends Component
                 'status' => SalesVisit::getStatusOptions()[$visit->status] ?? $visit->status,
                 'status_key' => $visit->status, // Adiciona a chave do status para lógica
                 'marker_category' => $markerCategory, // Nova chave para a cor/tipo do marcador
-                'edit_url' => route('filament.app.pages.processar-visita', ['visit_uuid' => $visit->uuid])
+                'edit_url' => route('filament.app.pages.processar-visita', ['visit_uuid' => $visit->uuid]),
             ];
         })->values()->all();
 
@@ -85,6 +89,7 @@ class ScheduledVisitsMap extends Component
     {
         $this->viewMode = ($this->viewMode === 'map') ? 'list' : 'map';
     }
+
     public function render()
     {
         return view('livewire.scheduled-visits-map');

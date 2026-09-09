@@ -96,21 +96,27 @@
         </div>
     </div>
 
-    {{-- Script do Google Maps só é carregado se o modo mapa estiver ativo e houver dados --}}
-    @if($googleMapsApiKey && !empty($visitsForMap) && $viewMode === 'map')
-        @push('scripts')
+    {{-- Livewire executa a inicialização uma vez por instância do componente. --}}
+    @if($googleMapsApiKey && !empty($visitsForMap))
+        @script
             <script>
                 async function initScheduledVisitsMap() {
-                    const visitsData = @json($visitsForMap);
+                    const visitsData = @js($visitsForMap);
+                    const escapeHtml = (value) => {
+                        return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+                            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+                        })[char]);
+                    };
                     let map;
                     let infoWindow;
-                    const bounds = new google.maps.LatLngBounds();
 
                     if (visitsData.length === 0) {
                         return;
                     }
 
                     const {PinElement} = await google.maps.importLibrary("marker");
+                    await google.maps.importLibrary("maps");
+                    const bounds = new google.maps.LatLngBounds();
 
                     const initialCenter = {
                         lat: visitsData[0].latitude,
@@ -118,7 +124,7 @@
                     };
 
                     map = new google.maps.Map(document.getElementById('scheduledVisitsMapContainer'), {
-                        mapId: "{{ env('GOOGLE_MAPS_API_MAP_ID') }}",
+                        mapId: @js(config('filament-google-maps.map_id')),
                         center: initialCenter,
                         zoom: 12,
                         mapTypeControl: false,
@@ -174,15 +180,15 @@
                             content: pinGlyphElement, // Usa o elemento DOM do PinElement
                         });
 
-                        marker.addListener('gmp-click', () => {
+                        marker.addListener('click', () => {
                             let content = `
                             <div style="max-width: 250px;">
-                                <h4 style="font-weight: bold; margin-bottom: 5px;">${visit.client_name}</h4>
-                                <p style="font-size: 0.85em; margin-bottom: 3px;"><strong>Fantasia:</strong> ${visit.client_social_name || visit.client_name}</p>
-                                <p style="font-size: 0.85em; margin-bottom: 3px;"><strong>Agendado para:</strong> ${visit.scheduled_at_formatted}</p>
-                                <p style="font-size: 0.85em; margin-bottom: 3px;"><strong>Endereço:</strong> ${visit.address || 'N/A'}</p>
-                                <p style="font-size: 0.85em; margin-bottom: 3px;"><strong>Status:</strong> ${visit.status}</p>
-                                <a href="${visit.edit_url}" style="font-size: 0.85em; color: #3b82f6; text-decoration: underline;">Ver Detalhes da Visita</a>
+                                <h4 style="font-weight: bold; margin-bottom: 5px;">${escapeHtml(visit.client_name)}</h4>
+                                <p style="font-size: 0.85em; margin-bottom: 3px;"><strong>Fantasia:</strong> ${escapeHtml(visit.client_social_name || visit.client_name)}</p>
+                                <p style="font-size: 0.85em; margin-bottom: 3px;"><strong>Agendado para:</strong> ${escapeHtml(visit.scheduled_at_formatted)}</p>
+                                <p style="font-size: 0.85em; margin-bottom: 3px;"><strong>Endereço:</strong> ${escapeHtml(visit.address || 'N/A')}</p>
+                                <p style="font-size: 0.85em; margin-bottom: 3px;"><strong>Status:</strong> ${escapeHtml(visit.status)}</p>
+                                <a href="${escapeHtml(visit.edit_url)}" style="font-size: 0.85em; color: #3b82f6; text-decoration: underline;">Ver Detalhes da Visita</a>
                             </div>
                         `;
                             infoWindow.setContent(content);
@@ -199,9 +205,33 @@
                         }
                     }
                 }
+                const showMapError = () => {
+                    const container = document.getElementById('scheduledVisitsMapContainer');
+                    if (container) container.textContent = 'Não foi possível carregar o mapa. Verifique a configuração do Google Maps.';
+                };
+                if (! @js(config('filament-google-maps.map_id'))) {
+                    showMapError();
+                } else {
+                    if (!window.scheduledVisitsGoogleMapsReady) {
+                        window.scheduledVisitsGoogleMapsReady = window.google?.maps?.importLibrary
+                            ? Promise.resolve()
+                            : new Promise((resolve, reject) => {
+                                const script = document.createElement('script');
+                                const params = new URLSearchParams({
+                                    key: @js($googleMapsApiKey), loading: 'async', libraries: 'marker',
+                                    callback: 'scheduledVisitsGoogleMapsLoaded'
+                                });
+                                script.src = 'https://maps.googleapis.com/maps/api/js?' + params;
+                                script.async = true;
+                                const timeout = setTimeout(() => reject(new Error('Google Maps timeout')), 15000);
+                                window.scheduledVisitsGoogleMapsLoaded = () => { clearTimeout(timeout); resolve(); };
+                                script.onerror = () => { clearTimeout(timeout); reject(new Error('Google Maps load failed')); };
+                                document.head.appendChild(script);
+                            });
+                    }
+                    window.scheduledVisitsGoogleMapsReady.then(initScheduledVisitsMap).catch(showMapError);
+                }
             </script>
-            <script
-                src="https://maps.googleapis.com/maps/api/js?key={{ $googleMapsApiKey }}&loading=async&libraries=marker&mapId={{ env('GOOGLE_MAPS_API_MAP_ID') }}&callback=initScheduledVisitsMap"></script>
-        @endpush
+        @endscript
     @endif
 </div>

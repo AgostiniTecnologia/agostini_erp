@@ -4,27 +4,32 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\ClientResource\Pages;
 use App\Models\Client;
+use Cheesegrits\FilamentGoogleMaps\Fields\Map;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Forms\Get;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
-use Filament\Notifications\Notification;
-use Livewire\Component as Livewire;
-use Cheesegrits\FilamentGoogleMaps\Fields\Map;
 use Illuminate\Validation\Rule;
+use Livewire\Component as Livewire;
 
 class ClientResource extends Resource
 {
     protected static ?string $model = Client::class;
+
     protected static ?string $navigationIcon = 'heroicon-o-building-storefront';
+
     protected static ?string $navigationGroup = 'Cadastros';
+
     protected static ?int $navigationSort = 20;
+
     protected static ?string $modelLabel = 'Cliente';
+
     protected static ?string $pluralModelLabel = 'Clientes';
 
     public static function form(Form $form): Form
@@ -44,6 +49,7 @@ class ClientResource extends Resource
                                     ->live(onBlur: true)
                                     ->rule(function (Get $get, $record) {
                                         $companyId = $record?->company_id ?? auth()->user()?->company_id;
+
                                         return Rule::unique('clients', 'taxNumber')
                                             ->where('company_id', $companyId)
                                             ->ignore($record?->uuid, 'uuid');
@@ -55,11 +61,12 @@ class ClientResource extends Resource
                                             ->disabled(fn (Livewire $livewire) => $livewire->isLoadingCnpj)
                                             ->action(function (Get $get, Livewire $livewire) {
                                                 $cnpj = $get('taxNumber');
-                                                if (!$cnpj) {
+                                                if (! $cnpj) {
                                                     Notification::make()
                                                         ->title('CNPJ não informado')
                                                         ->warning()
                                                         ->send();
+
                                                     return;
                                                 }
                                                 $clean = preg_replace('/[^0-9]/', '', $cnpj);
@@ -82,8 +89,11 @@ class ClientResource extends Resource
                                     ->maxLength(20)
                                     ->rule(function (Get $get, $record) {
                                         $value = $get('state_registration');
-                                        if (!$value) return null;
+                                        if (! $value) {
+                                            return null;
+                                        }
                                         $companyId = $record?->company_id ?? auth()->user()?->company_id;
+
                                         return Rule::unique('clients', 'state_registration')
                                             ->where('company_id', $companyId)
                                             ->ignore($record?->uuid, 'uuid');
@@ -102,8 +112,11 @@ class ClientResource extends Resource
                                     ->maxLength(255)
                                     ->rule(function (Get $get, $record) {
                                         $value = $get('email');
-                                        if (!$value) return null;
+                                        if (! $value) {
+                                            return null;
+                                        }
                                         $companyId = $record?->company_id ?? auth()->user()?->company_id;
+
                                         return Rule::unique('clients', 'email')
                                             ->where('company_id', $companyId)
                                             ->ignore($record?->uuid, 'uuid');
@@ -135,11 +148,12 @@ class ClientResource extends Resource
                                                 ->disabled(fn (Livewire $livewire) => $livewire->isLoadingCep)
                                                 ->action(function (Get $get, Livewire $livewire) {
                                                     $cep = $get('address_zip_code');
-                                                    if (!$cep) {
+                                                    if (! $cep) {
                                                         Notification::make()
                                                             ->title('CEP não informado')
                                                             ->warning()
                                                             ->send();
+
                                                         return;
                                                     }
                                                     $clean = preg_replace('/[^0-9]/', '', $cep);
@@ -148,6 +162,7 @@ class ClientResource extends Resource
                                                             ->title('CEP inválido')
                                                             ->warning()
                                                             ->send();
+
                                                         return;
                                                     }
                                                     $livewire->dispatch('fetchCepData', cep: $clean);
@@ -185,6 +200,12 @@ class ClientResource extends Resource
                                         ->numeric()
                                         ->readOnly(),
                                     Map::make('map_visualization')
+                                        ->dehydrated(false)
+                                        ->afterStateHydrated(function ($component, Get $get) {
+                                            if (is_numeric($get('latitude')) && is_numeric($get('longitude'))) {
+                                                $component->state(['lat' => (float) $get('latitude'), 'lng' => (float) $get('longitude')]);
+                                            }
+                                        })
                                         ->label('Localização')
                                         ->columnSpanFull()
                                         ->height('400px')
@@ -193,9 +214,9 @@ class ClientResource extends Resource
                                         ->reactive()
                                         ->defaultLocation(fn (Get $get) => [
                                             (float) ($get('latitude') ?? -23.55052),
-                                            (float) ($get('longitude') ?? -46.633308)
+                                            (float) ($get('longitude') ?? -46.633308),
                                         ])
-                                        ->defaultZoom(fn (Get $get) => ($get('latitude') && $get('longitude')) ? 15 : 5)
+                                        ->defaultZoom(fn (Get $get) => ($get('latitude') && $get('longitude')) ? 15 : 5),
                                 ])->columns(2),
                             ])->columns(2),
                     ])->columnSpanFull(),

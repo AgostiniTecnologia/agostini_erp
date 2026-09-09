@@ -14,6 +14,12 @@ class ListPricingTable extends ListRecords
     {
         return [
             Actions\CreateAction::make(),
+            Actions\Action::make('viewPdf')
+                ->label('Visualizar PDF')
+                ->color('primary')
+                ->icon('heroicon-o-eye')
+                ->url(fn (): string => route('pricing-table.pdf'))
+                ->openUrlInNewTab(),
         ];
     }
 }

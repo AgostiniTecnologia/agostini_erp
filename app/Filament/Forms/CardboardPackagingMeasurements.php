@@ -21,6 +21,13 @@ class CardboardPackagingMeasurements
         return [
             Section::make('Medidas da embalagem')
                 ->schema([
+                    Section::make('Parâmetros de cálculo deste produto')
+                        ->description('Os valores vêm do padrão da empresa. Alterações feitas aqui valem somente para este produto.')
+                        ->schema([
+                            self::calculationSetting('fold_margin', 'Margem de dobra', 'fold_margin', 5),
+                            self::calculationSetting('length_flap_default', 'Aba padrão', 'length_flap_default', 60),
+                        ])
+                        ->columns(['default' => 1, 'md' => 2]),
                     Section::make('Medidas internas')
                         ->schema([
                             self::measurement('internal_length', 'Comprimento interno', true),
@@ -42,22 +49,24 @@ class CardboardPackagingMeasurements
                         ])
                         ->columns(['default' => 1, 'md' => 3]),
                     Section::make('Composição do comprimento da chapa')
+                        ->description('Calculada automaticamente e liberada para ajuste manual quando necessário.')
                         ->schema([
-                            self::measurement('left_flap', 'Aba esquerda')->readOnly(),
-                            self::measurement('left_height', 'Altura esquerda')->readOnly(),
-                            self::measurement('sheet_length', 'Comprimento')->readOnly(),
-                            self::measurement('right_height', 'Altura direita')->readOnly(),
-                            self::measurement('right_flap', 'Aba direita')->readOnly(),
+                            self::measurement('left_flap', 'Aba esquerda'),
+                            self::measurement('left_height', 'Altura esquerda'),
+                            self::measurement('sheet_length', 'Comprimento'),
+                            self::measurement('right_height', 'Altura direita'),
+                            self::measurement('right_flap', 'Aba direita'),
                             self::total('Comprimento total', CardboardMeasurements::LENGTH_FIELDS),
                         ])
                         ->columns(['default' => 1, 'md' => 3, 'xl' => 6]),
                     Section::make('Composição da largura da chapa')
+                        ->description('Calculada automaticamente e liberada para ajuste manual quando necessário.')
                         ->schema([
-                            self::measurement('top_flap', 'Aba superior')->readOnly(),
-                            self::measurement('top_height', 'Altura superior')->readOnly(),
-                            self::measurement('sheet_width', 'Largura')->readOnly(),
-                            self::measurement('bottom_height', 'Altura inferior')->readOnly(),
-                            self::measurement('bottom_flap', 'Aba inferior')->readOnly(),
+                            self::measurement('top_flap', 'Aba superior'),
+                            self::measurement('top_height', 'Altura superior'),
+                            self::measurement('sheet_width', 'Largura'),
+                            self::measurement('bottom_height', 'Altura inferior'),
+                            self::measurement('bottom_flap', 'Aba inferior'),
                             self::total('Largura total', CardboardMeasurements::WIDTH_FIELDS),
                         ])
                         ->columns(['default' => 1, 'md' => 3, 'xl' => 6]),
@@ -106,10 +115,39 @@ class CardboardPackagingMeasurements
 
         if ($recalculate) {
             $input->afterStateUpdated(fn (Get $get, Set $set) => self::recalculate($get, $set));
-            $input->afterStateHydrated(fn (Get $get, Set $set) => self::recalculate($get, $set));
+
+            if ($name === 'internal_height') {
+                $input->afterStateHydrated(function (Get $get, Set $set): void {
+                    if (! self::hasComposition($get)) {
+                        self::recalculate($get, $set);
+                    }
+                });
+            }
         }
 
         return $input;
+    }
+
+    private static function calculationSetting(
+        string $name,
+        string $label,
+        string $companyAttribute,
+        float $fallback,
+    ): TextInput {
+        return TextInput::make($name)
+            ->label($label)
+            ->suffix(fn (): string => CompanyMeasurementSettings::lengthUnit())
+            ->numeric()
+            ->minValue(0)
+            ->required()
+            ->default(fn (): mixed => CompanyMeasurementSettings::company()?->{$companyAttribute} ?? $fallback)
+            ->afterStateHydrated(function (TextInput $component, mixed $state) use ($companyAttribute, $fallback): void {
+                if (blank($state)) {
+                    $component->state(CompanyMeasurementSettings::company()?->{$companyAttribute} ?? $fallback);
+                }
+            })
+            ->live(onBlur: true)
+            ->afterStateUpdated(fn (Get $get, Set $set) => self::recalculate($get, $set));
     }
 
     private static function total(string $label, array $fields): Placeholder
@@ -128,13 +166,20 @@ class CardboardPackagingMeasurements
         return (array) ($get('cardboard_measurements') ?? []);
     }
 
+    private static function hasComposition(Get $get): bool
+    {
+        $measurements = self::measurements($get);
+
+        return collect([...CardboardMeasurements::LENGTH_FIELDS, ...CardboardMeasurements::WIDTH_FIELDS])
+            ->contains(fn (string $field): bool => array_key_exists($field, $measurements));
+    }
+
     private static function recalculate(Get $get, Set $set): void
     {
-        $company = CompanyMeasurementSettings::company();
         $calculated = CardboardMeasurements::fromInternalDimensions(
             self::measurements($get),
-            $company?->fold_margin ?? 5,
-            $company?->length_flap_default ?? 60,
+            $get('fold_margin') ?? CompanyMeasurementSettings::company()?->fold_margin ?? 5,
+            $get('length_flap_default') ?? CompanyMeasurementSettings::company()?->length_flap_default ?? 60,
         );
 
         foreach ($calculated as $field => $value) {

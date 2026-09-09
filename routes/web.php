@@ -1,16 +1,17 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\FinanceReportController;
+use App\Http\Controllers\Api\SalesReportController;
+use App\Http\Controllers\Api\TimeClockReportController;
+use App\Http\Controllers\Api\TransporteReportController;
 use App\Http\Controllers\DashboardProductionPdfController;
 use App\Http\Controllers\FinancialReportPdfController;
+use App\Http\Controllers\PricingTablePdfController;
 use App\Http\Controllers\ProductionOrderPdfController;
 use App\Http\Controllers\ProductTechnicalSheetPdfController;
 use App\Http\Controllers\TimeClockController;
 use App\Http\Controllers\VisitWithoutOrderPdfController;
-use App\Http\Controllers\PricingTablePdfController;
-use App\Http\Controllers\Api\FinanceReportController;
-use App\Http\Controllers\Api\SalesReportController;
-use App\Http\Controllers\Api\TimeClockReportController;
+use Illuminate\Support\Facades\Route;
 
 Route::redirect('/', '/app');
 
@@ -33,6 +34,9 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/transport-orders/{uuid}/pdf', [\App\Http\Controllers\TransportOrderPdfController::class, 'generatePdf'])
         ->name('transport-orders.pdf');
 
+    Route::get('/relatorio/transporte/pdf', [TransporteReportController::class, 'gerarPdf'])
+        ->name('transporte.relatorio.pdf');
+
     Route::get('/dp/pdf', [DashboardProductionPdfController::class, 'generatePdf'])
         ->name('production-dashboard.pdf');
 
@@ -45,12 +49,12 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/pricing-table/pdf', [PricingTablePdfController::class, 'generatePdf'])
         ->name('pricing-table.pdf');
 
-   Route::get('/relatorio/financeiro/pdf', [FinanceReportController::class, 'generatePdf'])
-    ->name('finance.pdf');
+    Route::get('/relatorio/financeiro/pdf', [FinanceReportController::class, 'generatePdf'])
+        ->name('finance.pdf');
 
     Route::get('/relatorio/ponto/pdf', [TimeClockReportController::class, 'gerarPdf'])
         ->name('time.clock.pdf');
-             
+
     Route::get('/relatorio/vendas/pdf', [SalesReportController::class, 'gerarPdf'])->name('sales.performance.pdf');
 
 });

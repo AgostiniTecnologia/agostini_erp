@@ -124,6 +124,59 @@ class OperationalProfileTest extends TestCase
         $this->assertSame('48', $measurements['sheet_width']);
     }
 
+    public function test_cardboard_cut_measurements_can_use_product_specific_configuration(): void
+    {
+        $company = Company::factory()->create([
+            'operational_profile' => OperationalProfile::CardboardPackaging,
+            'fold_margin' => 8,
+            'length_flap_default' => 70,
+        ]);
+        $this->actingAs(User::factory()->for($company)->create());
+
+        $product = Product::factory()->forCompany($company)->create([
+            'fold_margin' => 3,
+            'length_flap_default' => 45,
+            'cardboard_measurements' => [
+                'internal_length' => '100',
+                'internal_width' => '40',
+                'internal_height' => '20',
+            ],
+        ]);
+
+        $measurements = $product->fresh()->cardboard_measurements;
+        $this->assertSame('45', $measurements['left_flap']);
+        $this->assertSame('103', $measurements['sheet_length']);
+        $this->assertSame('23', $measurements['top_flap']);
+        $this->assertSame('8.000', $company->fresh()->fold_margin);
+        $this->assertSame('70.000', $company->fresh()->length_flap_default);
+    }
+
+    public function test_manually_edited_composition_is_not_overwritten_when_product_is_saved(): void
+    {
+        $company = Company::factory()->create([
+            'operational_profile' => OperationalProfile::CardboardPackaging,
+        ]);
+        $this->actingAs(User::factory()->for($company)->create());
+
+        $product = Product::factory()->forCompany($company)->create([
+            'cardboard_measurements' => [
+                'internal_length' => '100',
+                'internal_width' => '40',
+                'internal_height' => '20',
+                'left_flap' => '47.5',
+                'sheet_length' => '111',
+                'top_flap' => '26',
+            ],
+        ]);
+
+        $measurements = $product->fresh()->cardboard_measurements;
+        $this->assertSame('47.5', $measurements['left_flap']);
+        $this->assertSame('111', $measurements['sheet_length']);
+        $this->assertSame('26', $measurements['top_flap']);
+        $this->assertSame('20', $measurements['left_height']);
+        $this->assertSame('45', $measurements['sheet_width']);
+    }
+
     public function test_measurement_units_are_read_from_the_current_company(): void
     {
         $company = Company::factory()->create([
@@ -201,6 +254,22 @@ class OperationalProfileTest extends TestCase
         ]);
 
         $this->assertNull($product->fresh()->cardboard_measurements);
+    }
+
+    public function test_standard_company_cannot_persist_product_cardboard_settings(): void
+    {
+        $company = Company::factory()->create([
+            'operational_profile' => OperationalProfile::Standard,
+        ]);
+        $this->actingAs(User::factory()->for($company)->create());
+
+        $product = Product::factory()->forCompany($company)->create([
+            'fold_margin' => 3,
+            'length_flap_default' => 45,
+        ]);
+
+        $this->assertNull($product->fresh()->fold_margin);
+        $this->assertNull($product->fresh()->length_flap_default);
     }
 
     public function test_profile_change_prevents_overwriting_preserved_measurements(): void

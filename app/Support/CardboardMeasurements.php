@@ -86,6 +86,27 @@ class CardboardMeasurements
         ]);
     }
 
+    /**
+     * Completa apenas os itens de composição que não foram informados.
+     * Assim, integrações continuam recebendo o cálculo automático e ajustes
+     * manuais feitos no cadastro do produto não são sobrescritos ao salvar.
+     */
+    public static function fillMissingComposition(
+        array $measurements,
+        mixed $foldMargin = 5,
+        mixed $lengthFlapDefault = 60,
+    ): array {
+        $calculated = self::fromInternalDimensions($measurements, $foldMargin, $lengthFlapDefault);
+
+        foreach ([...self::LENGTH_FIELDS, ...self::WIDTH_FIELDS] as $field) {
+            if (array_key_exists($field, $measurements)) {
+                $calculated[$field] = self::normalize($measurements[$field]);
+            }
+        }
+
+        return $calculated;
+    }
+
     private static function normalizedNumber(float $value): string
     {
         return self::normalize($value) ?? '0';
