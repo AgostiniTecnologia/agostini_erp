@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\SalesGoal;
 use App\Models\SalesOrder;
 use App\Models\SalesVisit;
 use App\Models\User;
@@ -12,45 +13,59 @@ class SalesReportService
     /**
      * Gera o relatório completo de vendas para PDF
      *
-     * @param string $startDate
-     * @param string $endDate
-     * @param string|int $companyId
-     * @return array
+     * @param  string|int  $companyId
      */
     public function generateReport(string $startDate, string $endDate, $companyId): array
     {
+        $periodStart = Carbon::parse($startDate)->startOfDay();
+        $periodEnd = Carbon::parse($endDate)->endOfDay();
+
         $salesVisits = SalesVisit::where('company_id', $companyId)
-            ->whereBetween('scheduled_at', [$startDate, $endDate])
+            ->whereBetween('scheduled_at', [$periodStart, $periodEnd])
             ->with(['client', 'assignedTo', 'salesOrder'])
             ->get();
 
         $salesOrders = SalesOrder::where('company_id', $companyId)
-            ->whereBetween('created_at', [$startDate, $endDate])
+            ->whereBetween('order_date', [$periodStart->toDateString(), $periodEnd->toDateString()])
+            ->where('status', '!=', SalesOrder::STATUS_CANCELLED)
             ->with(['client', 'user', 'items.product'])
             ->get();
 
         $users = User::where('company_id', $companyId)->get();
+        $goals = SalesGoal::where('company_id', $companyId)
+            ->whereBetween('period', [
+                $periodStart->copy()->startOfMonth()->toDateString(),
+                $periodEnd->copy()->startOfMonth()->toDateString(),
+            ])
+            ->get();
 
         $rows = [];
         foreach ($users as $user) {
-            $userOrders = $salesOrders->where('user_id', $user->id);
-            $userVisits = $salesVisits->where('assigned_to', $user->id);
+            $userOrders = $salesOrders->where('user_id', $user->getKey());
+            $userVisits = $salesVisits->where('assigned_to_user_id', $user->getKey());
+            $userGoal = (float) $goals->where('user_id', $user->getKey())->sum('goal_amount');
+            $userSales = (float) $userOrders->sum('total_amount');
 
             $totals = [
-                'sales' => $userOrders->sum('total_value'),
-                'goal' => $userOrders->sum('goal_value'),
-                'performance' => $userOrders->sum('goal_value') ? $userOrders->sum('total_value') / $userOrders->sum('goal_value') * 100 : 0,
-                'commission' => $userOrders->sum('commission'),
+                'sales' => $userSales,
+                'goal' => $userGoal,
+                'performance' => $userGoal > 0 ? $userSales / $userGoal * 100 : 0,
+                'commission' => (float) $userOrders->sum('commission_amount'),
             ];
 
             $visitsCompleted = $userVisits->where('status', SalesVisit::STATUS_COMPLETED)->count();
-            $conversionRate = $userVisits->count() ? ($visitsCompleted / $userVisits->count()) * 100 : 0;
+            $convertedVisits = $userVisits
+                ->where('status', SalesVisit::STATUS_COMPLETED)
+                ->filter(fn (SalesVisit $visit): bool => $visit->salesOrder !== null
+                    && $visit->salesOrder->status !== SalesOrder::STATUS_CANCELLED)
+                ->count();
+            $conversionRate = $visitsCompleted > 0 ? ($convertedVisits / $visitsCompleted) * 100 : 0;
 
             // Curva ABC Clientes
             $abcClients = $this->calculateABC($userOrders->groupBy('client_id')->map(function ($orders, $clientId) {
                 return [
                     'client' => $orders->first()->client->name ?? 'Sem Cliente',
-                    'total' => $orders->sum('total_value'),
+                    'total' => (float) $orders->sum('total_amount'),
                 ];
             })->values()->toArray());
 
@@ -59,7 +74,7 @@ class SalesReportService
                 return $order->items->map(function ($item) {
                     return [
                         'product' => $item->product->name ?? 'Produto Desconhecido',
-                        'total' => $item->total_value,
+                        'total' => (float) $item->total_price,
                     ];
                 });
             })->groupBy('product')->map(function ($items, $productName) {
@@ -70,12 +85,15 @@ class SalesReportService
             })->values()->toArray());
 
             // Visitas sem pedido
-            $withoutOrder = $userVisits->filter(fn($v) => !$v->salesOrder)->count();
-            $withoutOrderDetails = $userVisits->filter(fn($v) => !$v->salesOrder)->map(function ($v) {
+            $withoutOrderVisits = $userVisits
+                ->where('status', SalesVisit::STATUS_COMPLETED)
+                ->filter(fn (SalesVisit $visit): bool => $visit->salesOrder === null);
+            $withoutOrder = $withoutOrderVisits->count();
+            $withoutOrderDetails = $withoutOrderVisits->map(function ($v) {
                 return [
                     'client' => $v->client->name ?? 'Sem Cliente',
                     'date' => Carbon::parse($v->scheduled_at)->format('d/m/Y H:i'),
-                    'reason' => $v->reason ?? '-',
+                    'reason' => $v->report_reason_no_order ?: '-',
                 ];
             })->toArray();
 
@@ -93,12 +111,20 @@ class SalesReportService
             ];
         }
 
+        $totalSales = (float) $salesOrders->sum('total_amount');
+        $totalGoal = (float) $goals->sum('goal_amount');
+        $completedVisits = $salesVisits->where('status', SalesVisit::STATUS_COMPLETED);
+        $convertedVisits = $completedVisits
+            ->filter(fn (SalesVisit $visit): bool => $visit->salesOrder !== null
+                && $visit->salesOrder->status !== SalesOrder::STATUS_CANCELLED)
+            ->count();
+
         $summary = [
-            'total_sales' => $salesOrders->sum('total_value'),
-            'total_goal' => $salesOrders->sum('goal_value'),
-            'achievement_rate' => $salesOrders->sum('goal_value') ? $salesOrders->sum('total_value') / $salesOrders->sum('goal_value') * 100 : 0,
-            'total_commission' => $salesOrders->sum('commission'),
-            'avg_conversion_rate' => $salesVisits->count() ? ($salesVisits->where('status', SalesVisit::STATUS_COMPLETED)->count() / $salesVisits->count()) * 100 : 0,
+            'total_sales' => $totalSales,
+            'total_goal' => $totalGoal,
+            'achievement_rate' => $totalGoal > 0 ? $totalSales / $totalGoal * 100 : 0,
+            'total_commission' => (float) $salesOrders->sum('commission_amount'),
+            'avg_conversion_rate' => $completedVisits->count() > 0 ? ($convertedVisits / $completedVisits->count()) * 100 : 0,
         ];
 
         $analysis = $this->generateAnalysis($rows);
@@ -113,17 +139,18 @@ class SalesReportService
     private function calculateABC(array $items): array
     {
         $totalSum = array_sum(array_column($items, 'total'));
-        usort($items, fn($a, $b) => $b['total'] <=> $a['total']);
+        usort($items, fn ($a, $b) => $b['total'] <=> $a['total']);
 
         $accumulated = 0;
         foreach ($items as $i => &$item) {
             $percentage = $totalSum ? ($item['total'] / $totalSum) * 100 : 0;
+            $previousAccumulated = $accumulated;
             $accumulated += $percentage;
             $item['accumulated_percentage'] = $accumulated;
 
-            if ($accumulated <= 70) {
+            if ($previousAccumulated < 70) {
                 $item['category'] = 'A';
-            } elseif ($accumulated <= 90) {
+            } elseif ($previousAccumulated < 90) {
                 $item['category'] = 'B';
             } else {
                 $item['category'] = 'C';
@@ -135,23 +162,30 @@ class SalesReportService
 
     private function generateAnalysis(array $rows): string
     {
-        $analysis = "";
+        $analysis = '';
         foreach ($rows as $row) {
-            if ($row['totals']['performance'] < 80) {
-                $analysis .= "⚠️ O vendedor {$row['salesperson']} está abaixo da meta ({$row['totals']['performance']}%).\n";
+            if ($row['totals']['goal'] <= 0) {
+                $analysis .= "ℹ️ O vendedor {$row['salesperson']} não possui meta cadastrada para o período.\n";
+            } elseif ($row['totals']['performance'] < 80) {
+                $analysis .= "⚠️ O vendedor {$row['salesperson']} está abaixo da meta (".number_format($row['totals']['performance'], 1, ',', '.')."%).\n";
             } elseif ($row['totals']['performance'] >= 100) {
-                $analysis .= "✅ O vendedor {$row['salesperson']} atingiu ou superou a meta ({$row['totals']['performance']}%).\n";
+                $analysis .= "✅ O vendedor {$row['salesperson']} atingiu ou superou a meta (".number_format($row['totals']['performance'], 1, ',', '.')."%).\n";
             } else {
-                $analysis .= "🔹 O vendedor {$row['salesperson']} está próximo da meta ({$row['totals']['performance']}%).\n";
+                $analysis .= "🔹 O vendedor {$row['salesperson']} está próximo da meta (".number_format($row['totals']['performance'], 1, ',', '.')."%).\n";
             }
 
             if ($row['visits']['without_order'] > 0) {
-                $analysis .= "⚠️ Possui {$row['visits']['without_order']} visitas sem pedidos.\n";
+                $analysis .= "⚠️ Possui {$row['visits']['without_order']} visita(s) concluída(s) sem pedido.\n";
+            }
+
+            if ($row['visits']['completed'] > 0) {
+                $analysis .= '📈 Conversão das visitas concluídas: '
+                    .number_format($row['visits']['conversion_rate'], 1, ',', '.')."%.\n";
             }
 
             $topClients = collect($row['abc_clients'])->where('category', 'A')->pluck('client')->toArray();
             if ($topClients) {
-                $analysis .= "⭐ Clientes prioritários (A): " . implode(', ', $topClients) . "\n";
+                $analysis .= '⭐ Clientes prioritários (A): '.implode(', ', $topClients)."\n";
             }
 
             $analysis .= "\n";

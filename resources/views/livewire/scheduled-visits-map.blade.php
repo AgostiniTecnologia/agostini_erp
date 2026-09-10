@@ -100,6 +100,9 @@
     @if($googleMapsApiKey && !empty($visitsForMap))
         @script
             <script>
+                let scheduledVisitsMap;
+                let scheduledVisitsBounds;
+
                 async function initScheduledVisitsMap() {
                     const visitsData = @js($visitsForMap);
                     const escapeHtml = (value) => {
@@ -107,7 +110,6 @@
                             '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
                         })[char]);
                     };
-                    let map;
                     let infoWindow;
 
                     if (visitsData.length === 0) {
@@ -116,14 +118,14 @@
 
                     const {PinElement} = await google.maps.importLibrary("marker");
                     await google.maps.importLibrary("maps");
-                    const bounds = new google.maps.LatLngBounds();
+                    scheduledVisitsBounds = new google.maps.LatLngBounds();
 
                     const initialCenter = {
                         lat: visitsData[0].latitude,
                         lng: visitsData[0].longitude
                     };
 
-                    map = new google.maps.Map(document.getElementById('scheduledVisitsMapContainer'), {
+                    scheduledVisitsMap = new google.maps.Map(document.getElementById('scheduledVisitsMapContainer'), {
                         mapId: @js(config('filament-google-maps.map_id')),
                         center: initialCenter,
                         zoom: 12,
@@ -175,7 +177,7 @@
 
                         const marker = new google.maps.marker.AdvancedMarkerElement({
                             position: markerPosition,
-                            map: map,
+                            map: scheduledVisitsMap,
                             title: visit.client_name + ' - ' + visit.scheduled_at_formatted,
                             content: pinGlyphElement, // Usa o elemento DOM do PinElement
                         });
@@ -192,19 +194,32 @@
                             </div>
                         `;
                             infoWindow.setContent(content);
-                            infoWindow.open(map, marker);
+                            infoWindow.open(scheduledVisitsMap, marker);
                         });
 
-                        bounds.extend(markerPosition);
+                        scheduledVisitsBounds.extend(markerPosition);
                     });
 
                     if (visitsData.length > 0) {
-                        map.fitBounds(bounds);
+                        scheduledVisitsMap.fitBounds(scheduledVisitsBounds);
                         if (visitsData.length === 1) {
-                            map.setZoom(15);
+                            scheduledVisitsMap.setZoom(15);
                         }
                     }
                 }
+
+                $wire.on('scheduled-visits-map-shown', () => {
+                    requestAnimationFrame(() => {
+                        if (!scheduledVisitsMap || !scheduledVisitsBounds) return;
+
+                        google.maps.event.trigger(scheduledVisitsMap, 'resize');
+                        scheduledVisitsMap.fitBounds(scheduledVisitsBounds);
+
+                        if (@js(count($visitsForMap)) === 1) {
+                            scheduledVisitsMap.setZoom(15);
+                        }
+                    });
+                });
                 const showMapError = () => {
                     const container = document.getElementById('scheduledVisitsMapContainer');
                     if (container) container.textContent = 'Não foi possível carregar o mapa. Verifique a configuração do Google Maps.';

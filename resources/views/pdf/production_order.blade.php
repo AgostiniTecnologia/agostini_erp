@@ -55,7 +55,7 @@
             margin-bottom: 15px; /* Espaço extra após cada tabela de etapas */
         }
         .measurements-table {
-            font-size: 8px;
+            font-size: 12px;
             margin-bottom: 8px;
             table-layout: auto;
         }

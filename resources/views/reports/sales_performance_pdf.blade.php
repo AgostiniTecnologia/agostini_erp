@@ -140,14 +140,14 @@
     @endforeach
 
     <div class="section">
-        <h2>🤖 Análise Inteligente do Consultor IA</h2>
+        <h2>Análise Inteligente de Vendas</h2>
         <div class="analysis">
             {!! nl2br(e($reportData['analysis'])) !!}
         </div>
     </div>
 
     <div class="small muted" style="margin-top: 20px; padding-top: 10px; border-top: 1px solid #ddd;">
-        Relatório gerado automaticamente pelo Sistema de Gestão com IA | Agostini Tecnologia
+        Relatório gerado automaticamente a partir dos dados do Sistema de Gestão | Agostini Tecnologia
     </div>
 </body>
 </html>

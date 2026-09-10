@@ -37,7 +37,9 @@ class CompanyController extends Controller
             'operational_profile' => 'sometimes|string',
             'length_unit' => 'sometimes|in:mm,cm,m',
             'weight_unit' => 'sometimes|in:g,kg,t',
+            'sales_visits_default_view' => 'sometimes|in:map,list',
             'fold_margin' => 'sometimes|numeric|min:0',
+            'fold_margin_double' => 'sometimes|numeric|min:0',
             'length_flap_default' => 'sometimes|numeric|min:0',
         ]);
 
@@ -82,7 +84,9 @@ class CompanyController extends Controller
             'operational_profile' => 'sometimes|string',
             'length_unit' => 'sometimes|in:mm,cm,m',
             'weight_unit' => 'sometimes|in:g,kg,t',
+            'sales_visits_default_view' => 'sometimes|in:map,list',
             'fold_margin' => 'sometimes|numeric|min:0',
+            'fold_margin_double' => 'sometimes|numeric|min:0',
             'length_flap_default' => 'sometimes|numeric|min:0',
         ]);
 

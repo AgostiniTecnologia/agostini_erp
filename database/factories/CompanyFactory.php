@@ -44,7 +44,9 @@ class CompanyFactory extends Factory
             'operational_profile' => OperationalProfile::Standard,
             'length_unit' => 'm',
             'weight_unit' => 'kg',
+            'sales_visits_default_view' => 'map',
             'fold_margin' => 5,
+            'fold_margin_double' => 5,
             'length_flap_default' => 60,
         ];
     }

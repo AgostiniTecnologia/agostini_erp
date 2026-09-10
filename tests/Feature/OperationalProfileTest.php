@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\CardboardSheetType;
 use App\Enums\OperationalProfile;
 use App\Models\Company;
 use App\Models\Product;
@@ -23,6 +24,7 @@ class OperationalProfileTest extends TestCase
         $this->assertSame('m', $company->length_unit->value);
         $this->assertSame('kg', $company->weight_unit->value);
         $this->assertSame('5.000', $company->fold_margin);
+        $this->assertSame('5.000', $company->fold_margin_double);
         $this->assertSame('60.000', $company->length_flap_default);
     }
 
@@ -151,6 +153,53 @@ class OperationalProfileTest extends TestCase
         $this->assertSame('70.000', $company->fresh()->length_flap_default);
     }
 
+    public function test_double_sheet_uses_the_company_double_fold_margin(): void
+    {
+        $company = Company::factory()->create([
+            'operational_profile' => OperationalProfile::CardboardPackaging,
+            'fold_margin' => 5,
+            'fold_margin_double' => 12,
+        ]);
+        $this->actingAs(User::factory()->for($company)->create());
+
+        $product = Product::factory()->forCompany($company)->create([
+            'cardboard_sheet_type' => CardboardSheetType::Double,
+            'cardboard_measurements' => [
+                'internal_length' => '100',
+                'internal_width' => '40',
+                'internal_height' => '20',
+            ],
+        ]);
+
+        $product->refresh();
+
+        $this->assertSame(CardboardSheetType::Double, $product->cardboard_sheet_type);
+        $this->assertSame('112', $product->cardboard_measurements['sheet_length']);
+        $this->assertSame('32', $product->cardboard_measurements['top_flap']);
+        $this->assertSame('52', $product->cardboard_measurements['sheet_width']);
+    }
+
+    public function test_product_fold_margin_still_overrides_the_selected_sheet_default(): void
+    {
+        $company = Company::factory()->create([
+            'operational_profile' => OperationalProfile::CardboardPackaging,
+            'fold_margin_double' => 12,
+        ]);
+        $this->actingAs(User::factory()->for($company)->create());
+
+        $product = Product::factory()->forCompany($company)->create([
+            'cardboard_sheet_type' => CardboardSheetType::Double,
+            'fold_margin' => 7,
+            'cardboard_measurements' => [
+                'internal_length' => '100',
+                'internal_width' => '40',
+                'internal_height' => '20',
+            ],
+        ]);
+
+        $this->assertSame('107', $product->fresh()->cardboard_measurements['sheet_length']);
+    }
+
     public function test_manually_edited_composition_is_not_overwritten_when_product_is_saved(): void
     {
         $company = Company::factory()->create([
@@ -264,11 +313,13 @@ class OperationalProfileTest extends TestCase
         $this->actingAs(User::factory()->for($company)->create());
 
         $product = Product::factory()->forCompany($company)->create([
+            'cardboard_sheet_type' => CardboardSheetType::Double,
             'fold_margin' => 3,
             'length_flap_default' => 45,
         ]);
 
         $this->assertNull($product->fresh()->fold_margin);
+        $this->assertNull($product->fresh()->cardboard_sheet_type);
         $this->assertNull($product->fresh()->length_flap_default);
     }
 

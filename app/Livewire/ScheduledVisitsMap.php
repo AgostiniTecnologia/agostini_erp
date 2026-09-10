@@ -2,6 +2,7 @@
 
 namespace App\Livewire;
 
+use App\Enums\SalesVisitsDefaultView;
 use App\Models\SalesVisit;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -19,6 +20,9 @@ class ScheduledVisitsMap extends Component
 
     public function mount(): void
     {
+        $preferredView = Auth::user()?->company?->getRawOriginal('sales_visits_default_view');
+        $this->viewMode = SalesVisitsDefaultView::tryFrom((string) $preferredView)?->value
+            ?? SalesVisitsDefaultView::Map->value;
         $this->googleMapsApiKey = config('filament-google-maps.keys.web_key');
         $this->loadScheduledVisits();
     }
@@ -88,6 +92,10 @@ class ScheduledVisitsMap extends Component
     public function toggleView(): void
     {
         $this->viewMode = ($this->viewMode === 'map') ? 'list' : 'map';
+
+        if ($this->viewMode === 'map') {
+            $this->dispatch('scheduled-visits-map-shown');
+        }
     }
 
     public function render()

@@ -8,9 +8,13 @@ use Illuminate\Support\Facades\Log;
 class AiReportService
 {
     protected string $apiKey;
+
     protected string $model;
+
     protected int $maxTokens;
+
     protected int $httpTimeout;
+
     protected ChartSvgService $chartService;
 
     public function __construct(ChartSvgService $chartService)
@@ -25,7 +29,7 @@ class AiReportService
     public function analyze(string $systemPrompt, string $userContent, array $options = []): string
     {
         if (empty($this->apiKey)) {
-            throw new \RuntimeException("OPENAI_API_KEY não está definido no .env ou config/openai.php");
+            throw new \RuntimeException('OPENAI_API_KEY não está definido no .env ou config/openai.php');
         }
 
         $payload = [
@@ -44,15 +48,50 @@ class AiReportService
                 ->post('https://api.openai.com/v1/chat/completions', $payload);
 
             if ($resp->failed()) {
-                Log::error('OpenAI API failed: ' . $resp->body());
-                throw new \RuntimeException("OpenAI API falhou: " . substr($resp->body(), 0, 1000));
+                Log::error('OpenAI API failed: '.$resp->body());
+                throw new \RuntimeException('OpenAI API falhou: '.substr($resp->body(), 0, 1000));
             }
 
             $json = $resp->json();
-            return trim($json['choices'][0]['message']['content'] ?? "Erro: resposta inválida");
+            $content = trim((string) ($json['choices'][0]['message']['content'] ?? ''));
+
+            if ($content === '') {
+                throw new \RuntimeException('OpenAI retornou uma resposta vazia ou inválida.');
+            }
+
+            return $content;
         } catch (\Exception $e) {
-            Log::error('AiReportService::analyze error: ' . $e->getMessage());
+            Log::error('AiReportService::analyze error: '.$e->getMessage());
             throw $e;
+        }
+    }
+
+    /**
+     * Mantém a análise calculada como fonte principal e usa a IA apenas como
+     * complemento opcional. Indisponibilidade da API nunca impede o relatório.
+     */
+    public function enhance(string $calculatedAnalysis, string $context, string $specialty): string
+    {
+        if ($this->apiKey === '') {
+            return $calculatedAnalysis;
+        }
+
+        try {
+            $complement = $this->analyze(
+                "Você é um consultor de {$specialty}. Complemente uma análise já calculada pelo sistema. "
+                .'Não repita o texto-base, não invente dados, não altere números e não apresente como fato algo que não esteja no contexto. '
+                .'Forneça no máximo três observações práticas e concisas em português do Brasil.',
+                "ANÁLISE CALCULADA (fonte de verdade):\n{$calculatedAnalysis}\n\nCONTEXTO ESTRUTURADO:\n{$context}",
+                ['temperature' => 0.1],
+            );
+
+            return $calculatedAnalysis."\n\nComplemento consultivo da IA:\n".$complement;
+        } catch (\Throwable $e) {
+            Log::warning('Complemento de IA indisponível; usando análise calculada.', [
+                'error' => $e->getMessage(),
+            ]);
+
+            return $calculatedAnalysis;
         }
     }
 
@@ -96,7 +135,7 @@ class AiReportService
                 $barColor
             );
 
-            imagestring($img, 3, $x, $height - 45 - $h, (string)$val, $black);
+            imagestring($img, 3, $x, $height - 45 - $h, (string) $val, $black);
 
             // label vertical
             $labelClean = mb_strimwidth($labels[$i], 0, 18, '...');
@@ -111,7 +150,7 @@ class AiReportService
             $x += $barWidth + $gap;
         }
 
-        imagestring($img, 5, 20, 10, "Ranking - Top produtos (tempo médio)", $black);
+        imagestring($img, 5, 20, 10, 'Ranking - Top produtos (tempo médio)', $black);
 
         ob_start();
         imagepng($img);
@@ -130,13 +169,13 @@ class AiReportService
         $max = max(1, max($pointsY));
 
         $img = imagecreatetruecolor($width, $height);
-        $white = imagecolorallocate($img, 255,255,255);
-        $gray = imagecolorallocate($img, 230,230,230);
-        $black = imagecolorallocate($img, 0,0,0);
-        $blue = imagecolorallocate($img, 0,120,255);
-        $red = imagecolorallocate($img, 230,0,0);
+        $white = imagecolorallocate($img, 255, 255, 255);
+        $gray = imagecolorallocate($img, 230, 230, 230);
+        $black = imagecolorallocate($img, 0, 0, 0);
+        $blue = imagecolorallocate($img, 0, 120, 255);
+        $red = imagecolorallocate($img, 230, 0, 0);
 
-        imagefill($img, 0,0,$white);
+        imagefill($img, 0, 0, $white);
 
         for ($i = 0; $i <= 5; $i++) {
             $y = 40 + (($height - 80) * $i / 5);
@@ -144,47 +183,50 @@ class AiReportService
         }
 
         if ($count < 2) {
-            imagestring($img, 5, 10, 10, "Dados insuficientes", $black);
+            imagestring($img, 5, 10, 10, 'Dados insuficientes', $black);
         } else {
-            $padLeft = 50; $padRight = 20; $padTop = 20; $padBottom = 40;
+            $padLeft = 50;
+            $padRight = 20;
+            $padTop = 20;
+            $padBottom = 40;
             $plotW = $width - ($padLeft + $padRight);
             $plotH = $height - ($padTop + $padBottom);
 
             $coords = [];
-            for ($i=0;$i<$count;$i++) {
-                $x = $padLeft + $plotW * ($i / max(1,$count-1));
+            for ($i = 0; $i < $count; $i++) {
+                $x = $padLeft + $plotW * ($i / max(1, $count - 1));
                 $y = $padTop + $plotH * (1 - ($pointsY[$i] / $max));
-                $coords[] = [$x,$y];
+                $coords[] = [$x, $y];
             }
 
             // linha principal
-            for ($i=0;$i<$count-1;$i++) {
+            for ($i = 0; $i < $count - 1; $i++) {
                 imageline($img,
                     intval($coords[$i][0]), intval($coords[$i][1]),
-                    intval($coords[$i+1][0]), intval($coords[$i+1][1]),
+                    intval($coords[$i + 1][0]), intval($coords[$i + 1][1]),
                     $blue
                 );
             }
 
             foreach ($coords as $c) {
-                imagefilledellipse($img, intval($c[0]), intval($c[1]), 6,6, $blue);
+                imagefilledellipse($img, intval($c[0]), intval($c[1]), 6, 6, $blue);
             }
 
             // regressão corrigida
             [$m,$b] = $this->linearRegressionSafe($pointsY);
 
             $x1 = $padLeft;
-            $y1 = $padTop + $plotH * (1 - (($m * 0 + $b)/$max));
+            $y1 = $padTop + $plotH * (1 - (($m * 0 + $b) / $max));
 
             $x2 = $padLeft + $plotW;
-            $y2 = $padTop + $plotH * (1 - (($m * ($count-1) + $b)/$max));
+            $y2 = $padTop + $plotH * (1 - (($m * ($count - 1) + $b) / $max));
 
-            imageline($img, intval($x1),intval($y1), intval($x2),intval($y2), $red);
+            imageline($img, intval($x1), intval($y1), intval($x2), intval($y2), $red);
 
-            imagestring($img, 3, $width-260, 10, sprintf("Regressão: y = %.2f x + %.2f", $m, $b), $red);
+            imagestring($img, 3, $width - 260, 10, sprintf('Regressão: y = %.2f x + %.2f', $m, $b), $red);
         }
 
-        imagestring($img, 5, 10, 10, "Timeline + Regressão", $black);
+        imagestring($img, 5, 10, 10, 'Timeline + Regressão', $black);
 
         ob_start();
         imagepng($img);
@@ -200,25 +242,29 @@ class AiReportService
     private function linearRegressionSafe(array $y): array
     {
         $n = count($y);
-        if ($n < 2) return [0, 0];
+        if ($n < 2) {
+            return [0, 0];
+        }
 
         $xSum = 0;
         $ySum = array_sum($y);
         $xxSum = 0;
         $xySum = 0;
 
-        for ($i=0; $i<$n; $i++) {
+        for ($i = 0; $i < $n; $i++) {
             $xSum += $i;
-            $xxSum += $i*$i;
-            $xySum += $i*$y[$i];
+            $xxSum += $i * $i;
+            $xySum += $i * $y[$i];
         }
 
         $den = ($n * $xxSum) - ($xSum * $xSum);
-        if ($den == 0) return [0, $ySum / $n];
+        if ($den == 0) {
+            return [0, $ySum / $n];
+        }
 
         $m = (($n * $xySum) - ($xSum * $ySum)) / $den;
         $b = ($ySum - ($m * $xSum)) / $n;
 
-        return [$m,$b];
+        return [$m, $b];
     }
 }

@@ -18,12 +18,17 @@ class SalesReportController extends Controller
 
     public function gerarPdf(Request $request)
     {
+        $request->validate([
+            'start' => ['nullable', 'date'],
+            'end' => ['nullable', 'date', 'after_or_equal:start'],
+        ]);
+
         $startDate = $request->query('start') ?? now()->startOfMonth()->format('Y-m-d');
         $endDate = $request->query('end') ?? now()->endOfMonth()->format('Y-m-d');
 
         $user = Auth::user();
 
-        if (!$user || !$user->company_id) {
+        if (! $user || ! $user->company_id) {
             return response()->json(['error' => 'Usuário não possui empresa vinculada.'], 400);
         }
 
@@ -35,7 +40,7 @@ class SalesReportController extends Controller
             'reportData' => $reportData,
             'generated_at' => now(),
             'startDate' => $startDate,
-            'endDate' => $endDate
+            'endDate' => $endDate,
         ]);
 
         return $pdf->stream('relatorio_vendas.pdf');

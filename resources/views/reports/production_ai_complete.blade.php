@@ -145,15 +145,14 @@
     </div>
 
     <div class="section">
-        <h2>Análise Automatizada (IA)</h2>
+        <h2>Análise Inteligente</h2>
         <div class="analysis">
             {!! nl2br(e($analysis)) !!}
         </div>
     </div>
 
     <div class="small muted">
-        Relatório gerado automaticamente pelo sistema.  
-        Para dúvidas, verifique logs em <code>storage/logs/laravel.log</code>.
+        Relatório gerado automaticamente a partir dos dados registrados no sistema.
     </div>
 </body>
 </html>

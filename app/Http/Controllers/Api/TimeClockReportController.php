@@ -20,7 +20,7 @@ class TimeClockReportController extends Controller
     {
         $request->validate([
             'inicio' => 'required|date',
-            'fim' => 'required|date',
+            'fim' => 'required|date|after_or_equal:inicio',
         ]);
 
         $data = $this->service->gerarRelatorio($request->inicio, $request->fim);

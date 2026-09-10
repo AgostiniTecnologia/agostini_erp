@@ -39,4 +39,8 @@ return [
         'maps_api_key' => env('FILAMENT_GOOGLE_MAPS_SERVER_API_KEY') ?: env('GOOGLE_MAPS_API_KEY'),
     ],
 
+    'nfse' => [
+        'emitter_url' => env('NFSE_EMITTER_URL', 'https://www.nfse.gov.br/EmissorNacional/Login'),
+    ],
+
 ];

@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Enums\LengthUnit;
 use App\Enums\OperationalProfile;
+use App\Enums\SalesVisitsDefaultView;
 use App\Enums\WeightUnit;
 use App\Filament\Resources\CompanyResource\Pages;
 use App\Models\Company;
@@ -146,8 +147,23 @@ class CompanyResource extends Resource
                                     ->default(WeightUnit::Kilogram->value)
                                     ->required()
                                     ->native(false),
+                                Select::make('sales_visits_default_view')
+                                    ->label('Visualização inicial de Minhas Visitas')
+                                    ->options(SalesVisitsDefaultView::class)
+                                    ->default(SalesVisitsDefaultView::Map->value)
+                                    ->required()
+                                    ->native(false)
+                                    ->helperText('Define se o painel da página inicial abre no mapa ou na lista.'),
                                 TextInput::make('fold_margin')
-                                    ->label('Margem de dobra')
+                                    ->label('Margem de dobra simples')
+                                    ->suffix(fn (Get $get): string => $get('length_unit') ?? LengthUnit::Meter->value)
+                                    ->numeric()
+                                    ->minValue(0)
+                                    ->default(5)
+                                    ->required()
+                                    ->visible(fn (Get $get): bool => $get('operational_profile') === OperationalProfile::CardboardPackaging->value),
+                                TextInput::make('fold_margin_double')
+                                    ->label('Margem de dobra dupla')
                                     ->suffix(fn (Get $get): string => $get('length_unit') ?? LengthUnit::Meter->value)
                                     ->numeric()
                                     ->minValue(0)

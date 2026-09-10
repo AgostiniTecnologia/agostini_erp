@@ -5,57 +5,58 @@ namespace App\Services;
 use App\Models\Product;
 use App\Models\ProductionOrder;
 use App\Models\TaskPauseLog;
-use App\Models\PauseReason;
 
 class AiReportDataService
 {
-    public function buildDataset(): array
+    public function buildDataset(string $companyId): array
     {
         return [
-            'dashboard' => $this->dashboardMetrics(),
-            'products' => $this->productsMetrics(),
-            'pause_reasons' => $this->pauseReasonsRanking(),
-            'production_history' => $this->productionHistory(),
+            'dashboard' => $this->dashboardMetrics($companyId),
+            'products' => $this->productsMetrics($companyId),
+            'pause_reasons' => $this->pauseReasonsRanking($companyId),
+            'production_history' => $this->productionHistory($companyId),
         ];
     }
 
     /* -----------------------------------------------------------
        DASHBOARD
     ----------------------------------------------------------- */
-    public function dashboardMetrics(): array
+    public function dashboardMetrics(string $companyId): array
     {
-        $totalOrders = ProductionOrder::count();
+        $totalOrders = ProductionOrder::where('company_id', $companyId)->count();
 
-        $completed = ProductionOrder::whereNotNull("start_date")
-            ->whereNotNull("completion_date")
+        $completed = ProductionOrder::where('company_id', $companyId)
+            ->whereNotNull('start_date')
+            ->whereNotNull('completion_date')
             ->get();
 
         $avgPerOrder = $completed->count() > 0
-            ? $completed->avg(fn($o) => $o->start_date->diffInSeconds($o->completion_date))
+            ? $completed->avg(fn ($o) => $o->start_date->diffInSeconds($o->completion_date))
             : 0;
 
         return [
             'total_orders' => $totalOrders,
-            'avg_lead_time_seconds' => (int)$avgPerOrder,
+            'avg_lead_time_seconds' => (int) $avgPerOrder,
         ];
     }
 
     /* -----------------------------------------------------------
        PRODUTOS — Ranking e tempos médios
     ----------------------------------------------------------- */
-    public function productsMetrics(): array
+    public function productsMetrics(string $companyId): array
     {
-        $products = Product::orderBy('name')->get();
+        $products = Product::where('company_id', $companyId)->orderBy('name')->get();
         $out = [];
 
         foreach ($products as $p) {
 
-            $orders = ProductionOrder::whereHas('items', fn($q) => 
-                $q->where('product_uuid', $p->uuid)
+            $orders = ProductionOrder::whereHas('items', fn ($q) => $q->where('product_uuid', $p->uuid)
             )
-            ->whereNotNull('start_date')
-            ->whereNotNull('completion_date')
-            ->get();
+                ->where('company_id', $companyId)
+                ->whereNotNull('start_date')
+                ->whereNotNull('completion_date')
+                ->with('items')
+                ->get();
 
             if ($orders->count() === 0) {
                 $out[] = [
@@ -64,6 +65,7 @@ class AiReportDataService
                     'avg_dead_seconds' => 0,
                     'count' => 0,
                 ];
+
                 continue;
             }
 
@@ -74,11 +76,11 @@ class AiReportDataService
             foreach ($orders as $o) {
                 $lead = $o->start_date->diffInSeconds($o->completion_date);
 
-                $itemUuids = $o->items->pluck('uuid');
+                $itemUuids = $o->items->where('product_uuid', $p->uuid)->pluck('uuid');
 
-                $dead = TaskPauseLog::join('pause_reasons','pause_reasons.uuid','task_pause_logs.pause_reason_uuid')
-                    ->whereIn('task_pause_logs.production_order_item_uuid',$itemUuids)
-                    ->where('pause_reasons.type','dead_time')
+                $dead = TaskPauseLog::join('pause_reasons', 'pause_reasons.uuid', 'task_pause_logs.pause_reason_uuid')
+                    ->whereIn('task_pause_logs.production_order_item_uuid', $itemUuids)
+                    ->where('pause_reasons.type', 'dead_time')
                     ->sum('duration_seconds');
 
                 $effective = max(0, $lead - $dead);
@@ -90,8 +92,8 @@ class AiReportDataService
 
             $out[] = [
                 'product' => $p->name,
-                'avg_effective_seconds' => (int)($effSum / $count),
-                'avg_dead_seconds' => (int)($deadSum / $count),
+                'avg_effective_seconds' => (int) ($effSum / $count),
+                'avg_dead_seconds' => (int) ($deadSum / $count),
                 'count' => $count,
             ];
         }
@@ -102,22 +104,25 @@ class AiReportDataService
     /* -----------------------------------------------------------
        MOTIVOS DE PAUSA — Ranking
     ----------------------------------------------------------- */
-    public function pauseReasonsRanking(): array
+    public function pauseReasonsRanking(string $companyId): array
     {
-        return TaskPauseLog::join('pause_reasons','pause_reasons.uuid','task_pause_logs.pause_reason_uuid')
-            ->selectRaw("
+        return TaskPauseLog::join('pause_reasons', 'pause_reasons.uuid', 'task_pause_logs.pause_reason_uuid')
+            ->join('production_order_items', 'production_order_items.uuid', 'task_pause_logs.production_order_item_uuid')
+            ->where('production_order_items.company_id', $companyId)
+            ->whereNull('production_order_items.deleted_at')
+            ->selectRaw('
                 pause_reasons.name AS motivo,
                 pause_reasons.type AS tipo,
                 SUM(task_pause_logs.duration_seconds) AS total_seconds
-            ")
-            ->groupBy('pause_reasons.name','pause_reasons.type')
+            ')
+            ->groupBy('pause_reasons.name', 'pause_reasons.type')
             ->orderByDesc('total_seconds')
             ->get()
-            ->map(function($i){
+            ->map(function ($i) {
                 return [
                     'motivo' => $i->motivo,
                     'tipo' => $this->translateType($i->tipo),
-                    'total_seconds' => (int)$i->total_seconds,
+                    'total_seconds' => (int) $i->total_seconds,
                 ];
             })
             ->toArray();
@@ -125,29 +130,32 @@ class AiReportDataService
 
     private function translateType(string $type): string
     {
-        return match($type) {
-            'dead_time'       => 'Tempo morto',
+        return match ($type) {
+            'dead_time' => 'Tempo morto',
             'productive_time' => 'Tempo produtivo',
             'mandatory_break' => 'Pausa obrigatória',
-            default           => 'Outro'
+            default => 'Outro'
         };
     }
 
     /* -----------------------------------------------------------
        HISTÓRICO DE PRODUÇÃO — lead time + produto + data
     ----------------------------------------------------------- */
-    public function productionHistory(): array
+    public function productionHistory(string $companyId): array
     {
-        return ProductionOrder::whereNotNull('start_date')
+        return ProductionOrder::where('company_id', $companyId)
+            ->whereNotNull('start_date')
             ->whereNotNull('completion_date')
             ->orderByDesc('completion_date')
             ->limit(30)
+            ->with('items.product')
             ->get()
-            ->map(function($o) {
+            ->map(function ($o) {
                 return [
                     'date' => $o->completion_date->format('d/m/Y H:i'),
-                    'product' => optional($o->items->first())->product->name ?? '—',
+                    'product' => $o->items->first()?->product?->name ?? '—',
                     'lead_time_seconds' => $o->start_date->diffInSeconds($o->completion_date),
+                    'status' => $o->status,
                 ];
             })
             ->toArray();

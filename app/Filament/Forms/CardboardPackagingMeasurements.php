@@ -2,6 +2,7 @@
 
 namespace App\Filament\Forms;
 
+use App\Enums\CardboardSheetType;
 use App\Support\CardboardMeasurements;
 use App\Support\CompanyMeasurementSettings;
 use Closure;
@@ -9,6 +10,7 @@ use Filament\Forms\Components\Actions;
 use Filament\Forms\Components\Actions\Action;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Section;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Get;
 use Filament\Forms\Set;
@@ -24,10 +26,11 @@ class CardboardPackagingMeasurements
                     Section::make('Parâmetros de cálculo deste produto')
                         ->description('Os valores vêm do padrão da empresa. Alterações feitas aqui valem somente para este produto.')
                         ->schema([
-                            self::calculationSetting('fold_margin', 'Margem de dobra', 'fold_margin', 5),
+                            self::sheetType(),
+                            self::foldMargin(),
                             self::calculationSetting('length_flap_default', 'Aba padrão', 'length_flap_default', 60),
                         ])
-                        ->columns(['default' => 1, 'md' => 2]),
+                        ->columns(['default' => 1, 'md' => 3]),
                     Section::make('Medidas internas')
                         ->schema([
                             self::measurement('internal_length', 'Comprimento interno', true),
@@ -150,6 +153,46 @@ class CardboardPackagingMeasurements
             ->afterStateUpdated(fn (Get $get, Set $set) => self::recalculate($get, $set));
     }
 
+    private static function sheetType(): Select
+    {
+        return Select::make('cardboard_sheet_type')
+            ->label('Tipo de chapa')
+            ->options(CardboardSheetType::class)
+            ->default(CardboardSheetType::Simple->value)
+            ->required()
+            ->native(false)
+            ->live()
+            ->afterStateHydrated(function (Select $component, mixed $state): void {
+                if (blank($state)) {
+                    $component->state(CardboardSheetType::Simple->value);
+                }
+            })
+            ->afterStateUpdated(function (mixed $state, Get $get, Set $set): void {
+                $set('fold_margin', self::companyFoldMargin($state));
+                self::recalculate($get, $set);
+            });
+    }
+
+    private static function foldMargin(): TextInput
+    {
+        return TextInput::make('fold_margin')
+            ->label(fn (Get $get): string => self::sheetTypeValue($get('cardboard_sheet_type')) === CardboardSheetType::Double
+                ? 'Margem de dobra dupla'
+                : 'Margem de dobra simples')
+            ->suffix(fn (): string => CompanyMeasurementSettings::lengthUnit())
+            ->numeric()
+            ->minValue(0)
+            ->required()
+            ->default(fn (Get $get): mixed => self::companyFoldMargin($get('cardboard_sheet_type')))
+            ->afterStateHydrated(function (TextInput $component, mixed $state, Get $get): void {
+                if (blank($state)) {
+                    $component->state(self::companyFoldMargin($get('cardboard_sheet_type')));
+                }
+            })
+            ->live(onBlur: true)
+            ->afterStateUpdated(fn (Get $get, Set $set) => self::recalculate($get, $set));
+    }
+
     private static function total(string $label, array $fields): Placeholder
     {
         return Placeholder::make(str($label)->snake()->toString())
@@ -178,7 +221,7 @@ class CardboardPackagingMeasurements
     {
         $calculated = CardboardMeasurements::fromInternalDimensions(
             self::measurements($get),
-            $get('fold_margin') ?? CompanyMeasurementSettings::company()?->fold_margin ?? 5,
+            $get('fold_margin') ?? self::companyFoldMargin($get('cardboard_sheet_type')),
             $get('length_flap_default') ?? CompanyMeasurementSettings::company()?->length_flap_default ?? 60,
         );
 
@@ -187,5 +230,23 @@ class CardboardPackagingMeasurements
                 $set("cardboard_measurements.{$field}", $value);
             }
         }
+    }
+
+    private static function companyFoldMargin(mixed $sheetType): mixed
+    {
+        $company = CompanyMeasurementSettings::company();
+
+        return self::sheetTypeValue($sheetType) === CardboardSheetType::Double
+            ? $company?->fold_margin_double ?? $company?->fold_margin ?? 5
+            : $company?->fold_margin ?? 5;
+    }
+
+    private static function sheetTypeValue(mixed $sheetType): CardboardSheetType
+    {
+        if ($sheetType instanceof CardboardSheetType) {
+            return $sheetType;
+        }
+
+        return CardboardSheetType::tryFrom((string) $sheetType) ?? CardboardSheetType::Simple;
     }
 }

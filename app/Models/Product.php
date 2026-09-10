@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\CardboardSheetType;
 use App\Models\Scopes\TenantScope;
 use App\Services\OperationalProfileResolver;
 use App\Support\CompanyMeasurementSettings;
@@ -47,6 +48,7 @@ class Product extends Model
         'width',
         'height',
         'cardboard_measurements',
+        'cardboard_sheet_type',
         'fold_margin',
         'length_flap_default',
     ];
@@ -61,6 +63,7 @@ class Product extends Model
         'sale_price' => 'decimal:2',
         'minimum_sale_price' => 'decimal:2',
         'cardboard_measurements' => 'array',
+        'cardboard_sheet_type' => CardboardSheetType::class,
         'fold_margin' => 'decimal:3',
         'length_flap_default' => 'decimal:3',
     ];
@@ -128,6 +131,7 @@ class Product extends Model
 
             if (Auth::check() && ! app(OperationalProfileResolver::class)->isCardboardPackaging()) {
                 unset($model->cardboard_measurements);
+                unset($model->cardboard_sheet_type);
                 unset($model->fold_margin);
                 unset($model->length_flap_default);
             }
@@ -141,7 +145,7 @@ class Product extends Model
                 $company = CompanyMeasurementSettings::company();
                 $model->cardboard_measurements = \App\Support\CardboardMeasurements::fillMissingComposition(
                     $model->cardboard_measurements,
-                    $model->fold_margin ?? $company?->fold_margin ?? 5,
+                    self::foldMargin($model, $company),
                     $model->length_flap_default ?? $company?->length_flap_default ?? 60,
                 );
             }
@@ -155,7 +159,7 @@ class Product extends Model
             }
 
             if (Auth::check() && ! app(OperationalProfileResolver::class)->isCardboardPackaging()) {
-                foreach (['fold_margin', 'length_flap_default'] as $setting) {
+                foreach (['cardboard_sheet_type', 'fold_margin', 'length_flap_default'] as $setting) {
                     if ($product->isDirty($setting)) {
                         $product->{$setting} = $product->getOriginal($setting);
                     }
@@ -174,7 +178,7 @@ class Product extends Model
                 $company = CompanyMeasurementSettings::company();
                 $product->cardboard_measurements = \App\Support\CardboardMeasurements::fillMissingComposition(
                     $product->cardboard_measurements ?? [],
-                    $product->fold_margin ?? $company?->fold_margin ?? 5,
+                    self::foldMargin($product, $company),
                     $product->length_flap_default ?? $company?->length_flap_default ?? 60,
                 );
             }
@@ -185,5 +189,20 @@ class Product extends Model
     {
         return collect(\App\Support\CardboardMeasurements::INTERNAL_FIELDS)
             ->contains(fn (string $field): bool => filled($measurements[$field] ?? null));
+    }
+
+    private static function foldMargin(Model $product, ?Company $company): mixed
+    {
+        if (filled($product->fold_margin)) {
+            return $product->fold_margin;
+        }
+
+        $sheetType = $product->cardboard_sheet_type instanceof CardboardSheetType
+            ? $product->cardboard_sheet_type
+            : CardboardSheetType::tryFrom((string) $product->cardboard_sheet_type);
+
+        return $sheetType === CardboardSheetType::Double
+            ? $company?->fold_margin_double ?? $company?->fold_margin ?? 5
+            : $company?->fold_margin ?? 5;
     }
 }

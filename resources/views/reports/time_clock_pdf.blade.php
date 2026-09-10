@@ -19,7 +19,7 @@
     @include('pdf.partials.company_logo')
 
     <h1>Relatório Consultor RH</h1>
-    <p><strong>Empresa:</strong> {{ $company->fantasy_name }}</p>
+    <p><strong>Empresa:</strong> {{ $company->name }}</p>
     <p><strong>Período:</strong> {{ $inicio }} até {{ $fim }}</p>
     <p><strong>Gerado em:</strong> {{ $generatedAt->format('d/m/Y H:i') }}</p>
 
@@ -38,15 +38,15 @@
                 <tr>
                     <td>{{ $e->user->name }}</td>
                     <td>{{ \Carbon\Carbon::parse($e->recorded_at)->format('d/m/Y H:i') }}</td>
-                    <td>{{ strtoupper($e->action_type) }}</td>
+                    <td>{{ $e->entry_type_label }}</td>
                     <td>{{ $e->approver->name ?? '—' }}</td>
                 </tr>
             @endforeach
         </tbody>
     </table>
 
-    <h2>Análise Profissional (IA)</h2>
-    <p>{!! nl2br(e($ia)) !!}</p>
+    <h2>Análise Inteligente</h2>
+    <p>{!! nl2br(e($analysis)) !!}</p>
 
 </body>
 </html>

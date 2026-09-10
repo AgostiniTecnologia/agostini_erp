@@ -5,22 +5,26 @@ namespace App\Services;
 use App\Models\TimeClockEntry;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
-use OpenAI\Laravel\Facades\OpenAI;
 
 class TimeClockReportService
 {
-    public function gerarRelatorio(string $inicio, string $fim)
+    public function __construct(
+        private readonly SmartReportAnalysisService $analysisService,
+        private readonly AiReportService $aiService,
+    ) {}
+
+    public function gerarRelatorio(string $inicio, string $fim): array
     {
         $user = Auth::user();
+        $companyId = $user?->company_id;
 
-        // Empresa do usuário autenticado
-        $companyId = $user->company_id;
+        if (! $user || ! $companyId) {
+            throw new \RuntimeException('Usuário não possui empresa vinculada.');
+        }
 
         // Todas as batidas dos usuários da empresa
         $entries = TimeClockEntry::with(['user', 'company', 'approver'])
-            ->whereHas('user', function ($q) use ($companyId) {
-                $q->where('company_id', $companyId);
-            })
+            ->where('company_id', $companyId)
             ->whereBetween('recorded_at', [
                 Carbon::parse($inicio)->startOfDay(),
                 Carbon::parse($fim)->endOfDay(),
@@ -28,39 +32,28 @@ class TimeClockReportService
             ->orderBy('recorded_at')
             ->get();
 
-        // Monta o texto que será enviado para IA
-        $dadosTexto = $entries->map(function ($e) {
-            return "{$e->user->name} | {$e->recorded_at} | {$e->action_type}";
-        })->join("\n");
+        $calculatedAnalysis = $this->analysisService->timeClock($entries);
+        $context = json_encode([
+            'period' => ['start' => $inicio, 'end' => $fim],
+            'totals_by_type' => $entries->countBy('type')->all(),
+            'totals_by_status' => $entries->countBy('status')->all(),
+            'employees' => $entries->groupBy('user_id')->map(fn ($items) => [
+                'name' => $items->first()->user?->name ?? 'Não identificado',
+                'entries' => $items->count(),
+                'manual_entries' => $items->where('type', TimeClockEntry::TYPE_MANUAL_ENTRY)->count(),
+                'alerts' => $items->where('status', TimeClockEntry::STATUS_ALERT)->count(),
+            ])->values()->all(),
+        ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
 
-        // Chamada correta ao modelo
-        $aiResponse = OpenAI::responses()->create([
-            'model'  => 'gpt-4.1-mini',
-            'input'  => "
-                Você é um consultor profissional de RH.
-                Gere um relatório detalhado sobre comportamento,
-                pontualidade e ocorrências dos colaboradores.
-
-                Empresa: {$user->company->fantasy_name}
-                Período: $inicio até $fim
-
-                Dados coletados:
-                $dadosTexto
-
-                Gere uma análise completa, profissional e com recomendações práticas.
-            ",
-        ]);
-
-        // CORREÇÃO: captura correta do texto retornado
-        $textoIA = $aiResponse->output[0]->content[0]->text;
+        $analysis = $this->aiService->enhance($calculatedAnalysis, $context, 'recursos humanos e controle de jornada');
 
         return [
-            'entries'     => $entries,
-            'inicio'      => $inicio,
-            'fim'         => $fim,
+            'entries' => $entries,
+            'inicio' => $inicio,
+            'fim' => $fim,
             'generatedAt' => now(),
-            'company'     => $user->company,
-            'ia'          => $textoIA,
+            'company' => $user->company,
+            'analysis' => $analysis,
         ];
     }
 }

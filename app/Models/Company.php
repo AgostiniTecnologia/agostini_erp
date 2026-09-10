@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\LengthUnit;
 use App\Enums\OperationalProfile;
+use App\Enums\SalesVisitsDefaultView;
 use App\Enums\WeightUnit;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -43,7 +44,9 @@ class Company extends Model
         'operational_profile',
         'length_unit',
         'weight_unit',
+        'sales_visits_default_view',
         'fold_margin',
+        'fold_margin_double',
         'length_flap_default',
         'logo_path',
     ];
@@ -55,7 +58,9 @@ class Company extends Model
         'operational_profile' => OperationalProfile::class,
         'length_unit' => LengthUnit::class,
         'weight_unit' => WeightUnit::class,
+        'sales_visits_default_view' => SalesVisitsDefaultView::class,
         'fold_margin' => 'decimal:3',
+        'fold_margin_double' => 'decimal:3',
         'length_flap_default' => 'decimal:3',
     ];
 
