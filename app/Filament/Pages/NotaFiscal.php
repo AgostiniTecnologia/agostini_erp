@@ -32,8 +32,13 @@ class NotaFiscal extends Page
         ]);
     }
 
+    public static function getNavigationUrl(): string
+    {
+        return (string) config('services.nfse.emitter_url');
+    }
+
     public function mount(): void
     {
-        $this->redirect(config('services.nfse.emitter_url'), navigate: false);
+        $this->redirect(static::getNavigationUrl(), navigate: false);
     }
 }

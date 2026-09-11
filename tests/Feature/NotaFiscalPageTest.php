@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Filament\Pages\NotaFiscal;
 use App\Models\Company;
 use App\Models\Role;
 use App\Models\User;
@@ -11,6 +12,14 @@ use Tests\TestCase;
 class NotaFiscalPageTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_invoice_navigation_points_directly_to_the_official_nfse_emitter(): void
+    {
+        $this->assertSame(
+            'https://www.nfse.gov.br/EmissorNacional/Login',
+            NotaFiscal::getNavigationUrl(),
+        );
+    }
 
     public function test_accounting_user_is_redirected_to_the_official_nfse_emitter(): void
     {
