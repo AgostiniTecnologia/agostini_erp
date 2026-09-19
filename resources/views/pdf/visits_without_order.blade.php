@@ -15,6 +15,7 @@
         th { background-color: #f2f2f2; }
         .page-break { page-break-after: always; }
     </style>
+    @include('pdf.partials.typography')
 </head>
 <body>
     @include('pdf.partials.system_footer')

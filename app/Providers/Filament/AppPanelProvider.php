@@ -33,6 +33,17 @@ class AppPanelProvider extends PanelProvider
             ])
             ->darkMode(false)
             ->topNavigation()
+            ->navigationGroups([
+                'Filament Shield',
+                'Sistema',
+                'Cadastros',
+                'Vendas',
+                'Produção',
+                'Cargas',
+                'Financeiro',
+                'R.H.',
+                'Contábil',
+            ])
             ->maxContentWidth(MaxWidth::Full)
             ->theme(asset('css/filament/app/theme.css'))
             ->databaseNotifications()

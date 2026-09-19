@@ -10,7 +10,7 @@ class TransportOrderPdfController extends Controller
     public function generatePdf(string $uuid)
     {
         $transportOrder = TransportOrder::where('uuid', $uuid)
-            ->with(['company', 'items.client', 'items.product', 'vehicle', 'driver'])
+            ->with(['company', 'items.client', 'items.product', 'items.salesOrderItem', 'vehicle', 'driver'])
             ->firstOrFail();
 
         $pdf = Pdf::loadView('pdf.transport_order_shipment', ['transportOrder' => $transportOrder]);

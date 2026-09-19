@@ -30,6 +30,7 @@
         .border-s { border-left: 1px solid #e5e7eb; }
         /* Adicione mais estilos conforme necessário */
     </style>
+    @include('pdf.partials.typography')
 </head>
 <body>
     @include('pdf.partials.system_footer')

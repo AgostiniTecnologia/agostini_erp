@@ -14,7 +14,7 @@ class CompanyReportLogoTest extends TestCase
 
         $this->assertStringContainsString('Documento gerado pelo ERP Agostini Tecnologia.', $html);
         $this->assertStringContainsString(Company::defaultReportLogoDataUri(), $html);
-        $this->assertStringContainsString('font-size: 5px', $html);
+        $this->assertStringContainsString('font-size: 10px', $html);
     }
 
     public function test_every_downloadable_pdf_template_includes_the_system_footer(): void
@@ -42,6 +42,11 @@ class CompanyReportLogoTest extends TestCase
                 "@include('pdf.partials.system_footer')",
                 $contents,
                 "O template {$template} não contém o rodapé padrão.",
+            );
+            $this->assertStringContainsString(
+                "@include('pdf.partials.typography')",
+                $contents,
+                "O template {$template} não contém a tipografia padrão.",
             );
         }
     }

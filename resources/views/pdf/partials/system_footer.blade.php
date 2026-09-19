@@ -1,4 +1,4 @@
-<div style="position: fixed; right: 0; bottom: 0; left: 0; color: #9ca3af; font-family: DejaVu Sans, sans-serif; font-size: 5px; line-height: 1.1; text-align: center;">
+<div class="pdf-system-footer" style="position: fixed; right: 0; bottom: 0; left: 0; color: #9ca3af; font-family: DejaVu Sans, sans-serif; font-size: 10px; line-height: 1.1; text-align: center;">
     <div>Documento gerado pelo ERP Agostini Tecnologia.</div>
     <img
         src="{{ \App\Models\Company::defaultReportLogoDataUri() }}"

@@ -96,6 +96,32 @@
             margin: 2px 0;
         }
 
+        .order-total {
+            margin: 8px 0 0;
+            padding-top: 6px;
+            border-top: 1px solid #b0b0b0;
+            text-align: right;
+            font-size: 11px;
+            font-weight: bold;
+        }
+
+        .delivery-signature {
+            margin-top: 35px;
+            padding-top: 35px;
+            page-break-inside: avoid;
+            text-align: center;
+        }
+
+        .delivery-signature-line {
+            width: 55%;
+            margin: 0 auto 5px;
+            border-top: 1px solid #333;
+        }
+
+        .delivery-signature-details {
+            margin-top: 18px;
+        }
+
         .product-name-highlight {
             font-size: 11px;
             font-weight: bold;
@@ -112,6 +138,7 @@
             display: none;
         }
     </style>
+    @include('pdf.partials.typography')
 </head>
 <body>
     @include('pdf.partials.system_footer')
@@ -146,6 +173,13 @@
         @foreach($groupedItems as $clientId => $clientItems)
             @php
                 $client = $clientItems->first()->client;
+                $orderTotal = $clientItems->sum(function ($item) {
+                    $unitPrice = $item->salesOrderItem?->final_price
+                        ?? $item->product?->sale_price
+                        ?? 0;
+
+                    return (float) $item->quantity * (float) $unitPrice;
+                });
             @endphp
             <div class="client-cluster">
                 <div class="client-cluster-header">
@@ -172,6 +206,10 @@
                         </div>
                     </div>
                 @endforeach
+
+                <p class="order-total">
+                    Total da Encomenda: R$ {{ number_format($orderTotal, 2, ',', '.') }}
+                </p>
             </div>
         @endforeach
     @endif
@@ -180,6 +218,16 @@
         <h2>Observações Gerais da Ordem de Transporte:</h2>
         <p>{{ $transportOrder->notes }}</p>
     @endif
+
+    <div class="delivery-signature">
+        <div class="delivery-signature-line"></div>
+        <strong>Assinatura do Recebedor</strong>
+        <p class="delivery-signature-details">
+            Nome: ____________________________________
+            &nbsp;&nbsp;&nbsp;
+            Data: ______/______/________
+        </p>
+    </div>
 
 </div>
 </body>

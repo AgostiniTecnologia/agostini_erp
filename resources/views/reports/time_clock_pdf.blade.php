@@ -13,6 +13,7 @@
         th { background: #eee; }
         #logo { width: 120px; margin-bottom: 10px; }
     </style>
+    @include('pdf.partials.typography')
 </head>
 <body>
     @include('pdf.partials.system_footer')

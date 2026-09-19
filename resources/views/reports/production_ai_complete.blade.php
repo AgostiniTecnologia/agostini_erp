@@ -16,6 +16,7 @@
         .muted { color:#666; font-size:11px; }
         #logo{width: 150px;}
     </style>
+    @include('pdf.partials.typography')
 </head>
 <body>
     @include('pdf.partials.system_footer')

@@ -22,6 +22,7 @@
         .abc-b { color: #ffc107; font-weight: bold; }
         .abc-c { color: #dc3545; font-weight: bold; }
     </style>
+    @include('pdf.partials.typography')
 </head>
 <body>
     @include('pdf.partials.system_footer')

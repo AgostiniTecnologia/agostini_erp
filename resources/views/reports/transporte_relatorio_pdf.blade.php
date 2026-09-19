@@ -14,6 +14,7 @@
         .secao { margin-top: 25px; font-size: 15px; font-weight: bold; }
         #logo{width: 150px;}
     </style>
+    @include('pdf.partials.typography')
 </head>
 <body>
     @include('pdf.partials.system_footer')

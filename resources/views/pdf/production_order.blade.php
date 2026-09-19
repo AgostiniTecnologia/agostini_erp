@@ -157,6 +157,7 @@
         h2, .notes-section { page-break-before: auto; page-break-after: avoid; }
 
     </style>
+    @include('pdf.partials.typography')
 </head>
 <body>
     @include('pdf.partials.system_footer')

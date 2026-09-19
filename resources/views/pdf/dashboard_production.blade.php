@@ -111,6 +111,7 @@
         }
 
     </style>
+    @include('pdf.partials.typography')
 </head>
 <body>
 @include('pdf.partials.system_footer')

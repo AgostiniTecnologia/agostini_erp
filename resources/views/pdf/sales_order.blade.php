@@ -129,6 +129,7 @@
             margin-bottom: 3px; /* AJUSTE: Margem inferior dos parágrafos nas notas */
         }
     </style>
+    @include('pdf.partials.typography')
 </head>
 <body>
     @include('pdf.partials.system_footer')

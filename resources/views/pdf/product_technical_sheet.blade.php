@@ -5,18 +5,19 @@
     <title>Ficha técnica - {{ $product->name }}</title>
     <style>
         @page { margin: 24px; }
-        body { color: #1f2937; font-family: DejaVu Sans, sans-serif; font-size: 10px; }
-        h1 { font-size: 18px; margin: 0; text-align: center; }
-        h2 { background: #e5e7eb; border: 1px solid #9ca3af; font-size: 12px; margin: 16px 0 0; padding: 6px; }
+        body { color: #1f2937; font-family: DejaVu Sans, sans-serif; font-size: 12px; }
+        h1 { font-size: 20px; margin: 0; text-align: center; }
+        h2 { background: #e5e7eb; border: 1px solid #9ca3af; font-size: 14px; margin: 16px 0 0; padding: 6px; }
         .subtitle { color: #4b5563; margin: 4px 0 16px; text-align: center; }
         table { border-collapse: collapse; margin: 0; width: 100%; }
         th, td { border: 1px solid #9ca3af; padding: 6px; text-align: left; vertical-align: top; }
         th { background: #f3f4f6; font-weight: bold; }
         .label { background: #f9fafb; font-weight: bold; width: 22%; }
         .number { text-align: right; }
-        .result { background: #ecfeff; font-size: 14px; font-weight: bold; text-align: center; }
-        .footer { color: #6b7280; font-size: 8px; margin-top: 20px; text-align: right; }
+        .result { background: #ecfeff; font-size: 16px; font-weight: bold; text-align: center; }
+        .footer { color: #6b7280; font-size: 10px; margin-top: 20px; text-align: right; }
     </style>
+    @include('pdf.partials.typography')
 </head>
 <body>
     @include('pdf.partials.system_footer')

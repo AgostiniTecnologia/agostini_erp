@@ -12,17 +12,23 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
-use Illuminate\Support\Facades\Auth; // Para obter o company_id do usuário logado
+
+// Para obter o company_id do usuário logado
 
 class ChartOfAccountResource extends Resource
 {
     protected static ?string $model = ChartOfAccount::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-list-bullet'; // Ícone ajustado
+
     protected static ?string $navigationGroup = 'Financeiro';
+
     protected static ?int $navigationSort = 51; // Ajuste conforme necessário
+
     protected static ?string $navigationLabel = 'Plano de Contas'; // Mantido
+
     protected static ?string $modelLabel = 'Conta Contábil'; // Ajustado para singular
+
     protected static ?string $pluralModelLabel = 'Plano de Contas'; // Mantido
 
     public static function form(Form $form): Form
@@ -37,9 +43,13 @@ class ChartOfAccountResource extends Resource
                         titleAttribute: 'name', // Atributo para exibir no select
                         modifyQueryUsing: fn (Builder $query) => $query->orderBy('code') // Ordena pela coluna 'code'
                     )
+                    ->getOptionLabelFromRecordUsing(
+                        fn (ChartOfAccount $record): string => "{$record->indented_code} - {$record->name}"
+                    )
                     ->searchable()
                     ->preload()
                     ->nullable()
+                    ->disabledOn('edit')
                     ->helperText('Selecione a conta de nível superior, se aplicável.')
                     ->columnSpan(3), // Ajustado para melhor layout
 
@@ -72,6 +82,7 @@ class ChartOfAccountResource extends Resource
             ->columns([
                 Tables\Columns\TextColumn::make('code')
                     ->label('Código')
+                    ->formatStateUsing(fn (ChartOfAccount $record): string => $record->indented_code)
                     ->searchable()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('name')
@@ -84,7 +95,7 @@ class ChartOfAccountResource extends Resource
                     ->searchable()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('parentAccount.name') // Usando a relação correta
-                ->label('Conta Pai')
+                    ->label('Conta Pai')
                     ->placeholder('N/A')
                     ->searchable()
                     ->sortable(),
@@ -146,6 +157,4 @@ class ChartOfAccountResource extends Resource
                 SoftDeletingScope::class,
             ]);
     }
-    
 }
-

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\ChartOfAccount;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class ChartOfAccountController extends Controller
 {
@@ -20,43 +21,23 @@ class ChartOfAccountController extends Controller
     public function store(Request $request)
     {
         $data = $request->validate([
-            'company_id'  => 'required|uuid|exists:companies,uuid',
-            'name'        => 'required|string|max:100',
-            'type'        => 'required|in:asset,liability,equity,revenue,expense',
+            'company_id' => 'required|uuid|exists:companies,uuid',
+            'name' => 'required|string|max:100',
+            'type' => 'required|in:asset,liability,equity,revenue,expense',
             'parent_uuid' => 'nullable|uuid|exists:chart_of_accounts,uuid',
         ]);
 
         // 🔹 Agora não limitamos mais ao usuário logado,
         // basta enviar o UUID da empresa no request.
 
-        // Gerar código automático
-        if (!empty($data['parent_uuid'])) {
-            $parent = ChartOfAccount::where('uuid', $data['parent_uuid'])
-                ->where('company_id', $data['company_id'])
-                ->firstOrFail();
+        $chartOfAccount = DB::transaction(function () use ($data): ChartOfAccount {
+            $data['code'] = ChartOfAccount::generateNextCode(
+                $data['company_id'],
+                $data['parent_uuid'] ?? null,
+            );
 
-            $siblings = ChartOfAccount::where('company_id', $data['company_id'])
-                ->where('parent_uuid', $parent->uuid)
-                ->pluck('code');
-
-            $lastNumbers = $siblings->map(function ($code) {
-                $parts = explode('.', $code);
-                return (int) end($parts);
-            });
-
-            $nextNumber = $lastNumbers->isEmpty() ? 1 : ($lastNumbers->max() + 1);
-            $data['code'] = $parent->code . '.' . $nextNumber;
-
-        } else {
-            $siblings = ChartOfAccount::where('company_id', $data['company_id'])
-                ->whereNull('parent_uuid')
-                ->pluck('code');
-
-            $nextNumber = $siblings->isEmpty() ? 1 : ($siblings->map(fn($c) => (int) $c)->max() + 1);
-            $data['code'] = (string) $nextNumber;
-        }
-
-        $chartOfAccount = ChartOfAccount::create($data);
+            return ChartOfAccount::create($data);
+        });
 
         return response()->json($chartOfAccount, 201);
     }
@@ -77,15 +58,20 @@ class ChartOfAccountController extends Controller
         $chartOfAccount = ChartOfAccount::where('uuid', $uuid)->firstOrFail();
 
         $data = $request->validate([
-            'company_id'  => 'required|uuid|exists:companies,uuid',
-            'code'        => 'required|string',
-            'name'        => 'required|string|max:100',
-            'type'        => 'required|in:asset,liability,equity,revenue,expense',
+            'company_id' => 'required|uuid|exists:companies,uuid',
+            'name' => 'required|string|max:100',
+            'type' => 'required|in:asset,liability,equity,revenue,expense',
             'parent_uuid' => 'nullable|uuid|exists:chart_of_accounts,uuid',
         ]);
 
         if ($request->user()->company_id !== $data['company_id']) {
             return response()->json(['error' => 'Você não pode atualizar contas de outra empresa'], 403);
+        }
+
+        if (array_key_exists('parent_uuid', $data) && $data['parent_uuid'] !== $chartOfAccount->parent_uuid) {
+            return response()->json([
+                'error' => 'A conta pai não pode ser alterada depois da criação.',
+            ], 422);
         }
 
         $chartOfAccount->update($data);

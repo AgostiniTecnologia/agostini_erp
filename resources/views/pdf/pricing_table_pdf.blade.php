@@ -13,6 +13,7 @@
         th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 11px; }
         th { background-color: #f2f2f2; }
     </style>
+    @include('pdf.partials.typography')
 </head>
 <body>
     @include('pdf.partials.system_footer')
