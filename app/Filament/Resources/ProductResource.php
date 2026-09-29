@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Enums\CardboardProductType;
 use App\Filament\Forms\CardboardPackagingMeasurements;
 use App\Filament\Resources\ProductResource\Pages;
 use App\Filament\Resources\ProductResource\RelationManagers;
@@ -79,6 +80,32 @@ class ProductResource extends Resource
                                     ->default('unidade')
                                     ->searchable()
                                     ->columnSpan(1),
+                                Forms\Components\ToggleButtons::make('cardboard_product_type')
+                                    ->label('Configuração de medidas')
+                                    ->options(CardboardProductType::class)
+                                    ->icons([
+                                        CardboardProductType::Standard->value => 'heroicon-o-adjustments-horizontal',
+                                        CardboardProductType::Box->value => 'heroicon-o-cube',
+                                        CardboardProductType::Sheet->value => 'heroicon-o-rectangle-stack',
+                                        CardboardProductType::Corner->value => 'heroicon-o-chevron-double-right',
+                                    ])
+                                    ->colors([
+                                        CardboardProductType::Standard->value => 'gray',
+                                        CardboardProductType::Box->value => 'primary',
+                                        CardboardProductType::Sheet->value => 'info',
+                                        CardboardProductType::Corner->value => 'warning',
+                                    ])
+                                    ->default(CardboardProductType::Box->value)
+                                    ->afterStateHydrated(function (Forms\Components\ToggleButtons $component, mixed $state): void {
+                                        if (blank($state)) {
+                                            $component->state(CardboardProductType::Box->value);
+                                        }
+                                    })
+                                    ->required()
+                                    ->live()
+                                    ->inline()
+                                    ->visible(fn (): bool => app(OperationalProfileResolver::class)->isCardboardPackaging())
+                                    ->columnSpanFull(),
                                 Forms\Components\Textarea::make('description')
                                     ->label('Descrição')
                                     ->columnSpanFull(),

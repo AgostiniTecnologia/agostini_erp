@@ -2,6 +2,7 @@
 
 namespace App\Filament\Forms;
 
+use App\Enums\CardboardProductType;
 use App\Enums\CardboardSheetType;
 use App\Support\CardboardMeasurements;
 use App\Support\CompanyMeasurementSettings;
@@ -21,7 +22,13 @@ class CardboardPackagingMeasurements
     public static function schema(): array
     {
         return [
+            Section::make('Medidas e peso padrão do Agostini')
+                ->description('Usa o cadastro padrão de medidas, mesmo com o perfil de cartonagem ativo.')
+                ->visible(fn (Get $get): bool => self::productType($get) === CardboardProductType::Standard)
+                ->schema(self::standardSchema())
+                ->columns(['default' => 1, 'lg' => 4]),
             Section::make('Medidas da embalagem')
+                ->visible(fn (Get $get): bool => self::productType($get) === CardboardProductType::Box)
                 ->schema([
                     Section::make('Parâmetros de cálculo deste produto')
                         ->description('Os valores vêm do padrão da empresa. Alterações feitas aqui valem somente para este produto.')
@@ -85,7 +92,69 @@ class CardboardPackagingMeasurements
                         })
                         ->columnSpanFull(),
                 ]),
+            Section::make('Medidas da chapa')
+                ->visible(fn (Get $get): bool => self::productType($get) === CardboardProductType::Sheet)
+                ->schema([
+                    self::measurement('simple_sheet_length', 'Comprimento'),
+                    self::measurement('simple_sheet_width', 'Largura'),
+                    self::sheetSize(['simple_sheet_length'], ['simple_sheet_width']),
+                ])
+                ->columns(['default' => 1, 'md' => 2]),
+            Section::make('Medidas da cantoneira')
+                ->visible(fn (Get $get): bool => self::productType($get) === CardboardProductType::Corner)
+                ->schema([
+                    self::measurement('corner_length', 'Comprimento'),
+                    Section::make('Composição da largura da chapa')
+                        ->schema([
+                            self::measurement('corner_height_1', 'Altura 1'),
+                            self::measurement('corner_width', 'Largura'),
+                            self::measurement('corner_height_2', 'Altura 2'),
+                            self::total('Largura total', ['corner_height_1', 'corner_width', 'corner_height_2']),
+                        ])
+                        ->columns(['default' => 1, 'md' => 4]),
+                    Placeholder::make('corner_length_total')
+                        ->label('Comprimento total')
+                        ->content(fn (Get $get): string => CardboardMeasurements::format(
+                            CardboardMeasurements::cornerLengthTotal(self::measurements($get)),
+                        ).' '.CompanyMeasurementSettings::lengthUnit()),
+                    self::sheetSize(['corner_length'], ['corner_height_1', 'corner_width', 'corner_height_2']),
+                ]),
         ];
+    }
+
+    private static function standardSchema(): array
+    {
+        return [
+            TextInput::make('weight_net')->label('Peso líquido')->suffix(fn (): string => CompanyMeasurementSettings::weightUnit())->numeric(),
+            TextInput::make('weight')->label('Peso bruto')->suffix(fn (): string => CompanyMeasurementSettings::weightUnit())->numeric(),
+            TextInput::make('length')->label('Comprimento')->suffix(fn (): string => CompanyMeasurementSettings::lengthUnit())->numeric(),
+            TextInput::make('width')->label('Largura')->suffix(fn (): string => CompanyMeasurementSettings::lengthUnit())->numeric(),
+            TextInput::make('height')->label('Altura')->suffix(fn (): string => CompanyMeasurementSettings::lengthUnit())->numeric(),
+        ];
+    }
+
+    private static function sheetSize(array $lengthFields, array $widthFields): Placeholder
+    {
+        return Placeholder::make('calculated_sheet_size_'.implode('_', $lengthFields))
+            ->label('Tamanho da chapa')
+            ->content(function (Get $get) use ($lengthFields, $widthFields): HtmlString {
+                $measurements = self::measurements($get);
+                $length = CardboardMeasurements::format(CardboardMeasurements::total($measurements, $lengthFields));
+                $width = CardboardMeasurements::format(CardboardMeasurements::total($measurements, $widthFields));
+                $unit = CompanyMeasurementSettings::lengthUnit();
+
+                return new HtmlString("<strong>{$length} × {$width} {$unit}</strong>");
+            })
+            ->columnSpanFull();
+    }
+
+    private static function productType(Get $get): CardboardProductType
+    {
+        $type = $get('cardboard_product_type');
+
+        return $type instanceof CardboardProductType
+            ? $type
+            : CardboardProductType::tryFrom((string) $type) ?? CardboardProductType::Box;
     }
 
     private static function measurement(string $name, string $label, bool $recalculate = false): TextInput

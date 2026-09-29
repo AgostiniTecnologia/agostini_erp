@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\CardboardProductType;
 use App\Enums\OperationalProfile;
 use App\Models\Company;
 use App\Models\Product;
@@ -68,6 +69,64 @@ class ProductionOrderPdfMeasurementsTest extends TestCase
         $this->assertStringContainsString('1,5 kg', $html);
         $this->assertStringContainsString('0,4 m', $html);
         $this->assertStringNotContainsString('Composição do comprimento da chapa', $html);
+    }
+
+    public function test_cardboard_sheet_displays_length_and_width(): void
+    {
+        $product = new Product([
+            'name' => 'Chapa A',
+            'cardboard_product_type' => CardboardProductType::Sheet,
+            'cardboard_measurements' => ['simple_sheet_length' => '1200', 'simple_sheet_width' => '800'],
+        ]);
+
+        $html = view('pdf.production_order', [
+            'order' => $this->order(OperationalProfile::CardboardPackaging, $product),
+        ])->render();
+
+        $this->assertStringContainsString('Tamanho da chapa', $html);
+        $this->assertStringContainsString('1200 × 800 mm', $html);
+        $this->assertStringNotContainsString('Composição do comprimento da chapa', $html);
+    }
+
+    public function test_cardboard_corner_calculates_sheet_width_from_both_heights_and_width(): void
+    {
+        $product = new Product([
+            'name' => 'Cantoneira A',
+            'cardboard_product_type' => CardboardProductType::Corner,
+            'cardboard_measurements' => [
+                'corner_length' => '1000',
+                'corner_height_1' => '50',
+                'corner_width' => '30',
+                'corner_height_2' => '40',
+            ],
+        ]);
+
+        $html = view('pdf.production_order', [
+            'order' => $this->order(OperationalProfile::CardboardPackaging, $product),
+        ])->render();
+
+        $this->assertStringContainsString('Altura 1', $html);
+        $this->assertStringContainsString('Largura total', $html);
+        $this->assertStringContainsString('Tamanho da chapa: 1000 × 120 mm', $html);
+    }
+
+    public function test_standard_measurement_option_uses_agostini_fields_in_cardboard_profile(): void
+    {
+        $product = new Product([
+            'name' => 'Produto padrão',
+            'cardboard_product_type' => CardboardProductType::Standard,
+        ]);
+        $product->length = '10';
+        $product->width = '20';
+        $product->height = '30';
+
+        $html = view('pdf.production_order', [
+            'order' => $this->order(OperationalProfile::CardboardPackaging, $product),
+        ])->render();
+
+        $this->assertStringContainsString('Peso líquido', $html);
+        $this->assertStringContainsString('10 mm', $html);
+        $this->assertStringNotContainsString('Tamanho da chapa', $html);
     }
 
     public function test_qr_code_generation_expression_remains_present(): void

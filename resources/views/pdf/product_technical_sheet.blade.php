@@ -29,6 +29,13 @@
         $value = fn ($field, $suffix = '') => filled(data_get($product, $field)) ? data_get($product, $field).$suffix : 'Não informado';
         $measurement = fn ($field) => filled($measurements[$field] ?? null) ? str_replace('.', ',', $measurements[$field]).' '.$lengthUnit : 'Não informado';
         $money = fn ($field) => filled($product->{$field}) ? 'R$ '.number_format((float) $product->{$field}, 2, ',', '.') : 'Não informado';
+        $cardboardProductType = $product->cardboard_product_type instanceof \App\Enums\CardboardProductType
+            ? $product->cardboard_product_type->value
+            : ($product->cardboard_product_type ?: 'box');
+        $operationalProfile = $product->company?->operational_profile;
+        $isCardboardProfile = $operationalProfile instanceof \App\Enums\OperationalProfile
+            ? $operationalProfile === \App\Enums\OperationalProfile::CardboardPackaging
+            : $operationalProfile === \App\Enums\OperationalProfile::CardboardPackaging->value;
     @endphp
 
     <h1>Ficha técnica do produto</h1>
@@ -48,7 +55,7 @@
         <tr><td class="label">Preço mínimo de venda</td><td>{{ $money('minimum_sale_price') }}</td></tr>
     </table>
 
-    @if(($product->company?->getRawOriginal('operational_profile') ?? 'standard') === 'cardboard_packaging')
+    @if($isCardboardProfile && $cardboardProductType === 'box')
         <h2>Medidas internas da embalagem</h2>
         <table>
             <tr><th>Comprimento interno</th><th>Largura interna</th><th>Altura interna</th></tr>
@@ -71,6 +78,29 @@
                 <td>{{ $measurement('top_flap') }}</td><td>{{ $measurement('top_height') }}</td><td>{{ $measurement('sheet_width') }}</td>
                 <td>{{ $measurement('bottom_height') }}</td><td>{{ $measurement('bottom_flap') }}</td><td>{{ \App\Support\CardboardMeasurements::format($widthTotal) }} {{ $lengthUnit }}</td>
             </tr>
+        </table>
+        <table><tr><td class="result">Tamanho da chapa: {{ \App\Support\CardboardMeasurements::format($lengthTotal) }} × {{ \App\Support\CardboardMeasurements::format($widthTotal) }} {{ $lengthUnit }}</td></tr></table>
+    @elseif($isCardboardProfile && $cardboardProductType === 'sheet')
+        <h2>Medidas da chapa</h2>
+        <table>
+            <tr><th>Comprimento</th><th>Largura</th></tr>
+            <tr><td>{{ $measurement('simple_sheet_length') }}</td><td>{{ $measurement('simple_sheet_width') }}</td></tr>
+        </table>
+        <table><tr><td class="result">Tamanho da chapa: {{ \App\Support\CardboardMeasurements::format((float) ($measurements['simple_sheet_length'] ?? 0)) }} × {{ \App\Support\CardboardMeasurements::format((float) ($measurements['simple_sheet_width'] ?? 0)) }} {{ $lengthUnit }}</td></tr></table>
+    @elseif($isCardboardProfile && $cardboardProductType === 'corner')
+        @php
+            $lengthTotal = \App\Support\CardboardMeasurements::cornerLengthTotal($measurements);
+            $widthTotal = \App\Support\CardboardMeasurements::cornerWidthTotal($measurements);
+        @endphp
+        <h2>Medidas da cantoneira</h2>
+        <table>
+            <tr><th>Comprimento</th><th>Comprimento total</th></tr>
+            <tr><td>{{ $measurement('corner_length') }}</td><td>{{ \App\Support\CardboardMeasurements::format($lengthTotal) }} {{ $lengthUnit }}</td></tr>
+        </table>
+        <h2>Composição da largura da chapa</h2>
+        <table>
+            <tr><th>Altura 1</th><th>Largura</th><th>Altura 2</th><th>Largura total</th></tr>
+            <tr><td>{{ $measurement('corner_height_1') }}</td><td>{{ $measurement('corner_width') }}</td><td>{{ $measurement('corner_height_2') }}</td><td>{{ \App\Support\CardboardMeasurements::format($widthTotal) }} {{ $lengthUnit }}</td></tr>
         </table>
         <table><tr><td class="result">Tamanho da chapa: {{ \App\Support\CardboardMeasurements::format($lengthTotal) }} × {{ \App\Support\CardboardMeasurements::format($widthTotal) }} {{ $lengthUnit }}</td></tr></table>
     @else

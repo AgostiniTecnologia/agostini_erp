@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\CardboardProductType;
 use App\Enums\CardboardSheetType;
 use App\Models\Scopes\TenantScope;
 use App\Services\OperationalProfileResolver;
@@ -48,6 +49,7 @@ class Product extends Model
         'width',
         'height',
         'cardboard_measurements',
+        'cardboard_product_type',
         'cardboard_sheet_type',
         'fold_margin',
         'length_flap_default',
@@ -63,6 +65,7 @@ class Product extends Model
         'sale_price' => 'decimal:2',
         'minimum_sale_price' => 'decimal:2',
         'cardboard_measurements' => 'array',
+        'cardboard_product_type' => CardboardProductType::class,
         'cardboard_sheet_type' => CardboardSheetType::class,
         'fold_margin' => 'decimal:3',
         'length_flap_default' => 'decimal:3',
@@ -131,16 +134,17 @@ class Product extends Model
 
             if (Auth::check() && ! app(OperationalProfileResolver::class)->isCardboardPackaging()) {
                 unset($model->cardboard_measurements);
+                unset($model->cardboard_product_type);
                 unset($model->cardboard_sheet_type);
                 unset($model->fold_margin);
                 unset($model->length_flap_default);
             }
 
-            if (! self::hasInternalMeasurements($model->cardboard_measurements)) {
+            if (! self::hasMeasurements($model)) {
                 $model->cardboard_measurements = null;
             }
 
-            if (self::hasInternalMeasurements($model->cardboard_measurements)
+            if (self::isBox($model) && self::hasInternalMeasurements($model->cardboard_measurements)
                 && app(OperationalProfileResolver::class)->isCardboardPackaging()) {
                 $company = CompanyMeasurementSettings::company();
                 $model->cardboard_measurements = \App\Support\CardboardMeasurements::fillMissingComposition(
@@ -159,7 +163,7 @@ class Product extends Model
             }
 
             if (Auth::check() && ! app(OperationalProfileResolver::class)->isCardboardPackaging()) {
-                foreach (['cardboard_sheet_type', 'fold_margin', 'length_flap_default'] as $setting) {
+                foreach (['cardboard_product_type', 'cardboard_sheet_type', 'fold_margin', 'length_flap_default'] as $setting) {
                     if ($product->isDirty($setting)) {
                         $product->{$setting} = $product->getOriginal($setting);
                     }
@@ -168,11 +172,12 @@ class Product extends Model
 
             if ($product->isDirty('cardboard_measurements')
                 && app(OperationalProfileResolver::class)->isCardboardPackaging()
-                && ! self::hasInternalMeasurements($product->cardboard_measurements)) {
+                && ! self::hasMeasurements($product)) {
                 $product->cardboard_measurements = null;
             }
 
             if ($product->isDirty('cardboard_measurements')
+                && self::isBox($product)
                 && self::hasInternalMeasurements($product->cardboard_measurements)
                 && app(OperationalProfileResolver::class)->isCardboardPackaging()) {
                 $company = CompanyMeasurementSettings::company();
@@ -189,6 +194,31 @@ class Product extends Model
     {
         return collect(\App\Support\CardboardMeasurements::INTERNAL_FIELDS)
             ->contains(fn (string $field): bool => filled($measurements[$field] ?? null));
+    }
+
+    private static function hasMeasurements(Model $product): bool
+    {
+        $measurements = $product->cardboard_measurements ?? [];
+        $fields = match (self::productType($product)) {
+            CardboardProductType::Sheet => ['simple_sheet_length', 'simple_sheet_width'],
+            CardboardProductType::Corner => ['corner_length', 'corner_height_1', 'corner_width', 'corner_height_2'],
+            CardboardProductType::Standard => [],
+            default => \App\Support\CardboardMeasurements::INTERNAL_FIELDS,
+        };
+
+        return collect($fields)->contains(fn (string $field): bool => filled($measurements[$field] ?? null));
+    }
+
+    private static function isBox(Model $product): bool
+    {
+        return self::productType($product) === CardboardProductType::Box;
+    }
+
+    private static function productType(Model $product): CardboardProductType
+    {
+        return $product->cardboard_product_type instanceof CardboardProductType
+            ? $product->cardboard_product_type
+            : CardboardProductType::tryFrom((string) $product->cardboard_product_type) ?? CardboardProductType::Box;
     }
 
     private static function foldMargin(Model $product, ?Company $company): mixed

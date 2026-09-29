@@ -237,11 +237,14 @@
                 $displayValue = fn ($value, $suffix) => filled($value) ? str_replace('.', ',', (string) $value).$suffix : 'Não informado';
                 $lengthUnit = $order->company?->length_unit?->value ?? 'mm';
                 $weightUnit = $order->company?->weight_unit?->value ?? 'kg';
+                $cardboardProductType = $product?->cardboard_product_type instanceof \App\Enums\CardboardProductType
+                    ? $product->cardboard_product_type->value
+                    : ($product?->cardboard_product_type ?: 'box');
             @endphp
 
             <div class="measurements-title">Item {{ $loop->iteration }}: {{ $product->name ?? 'Produto não encontrado' }}</div>
 
-            @if($profile === \App\Enums\OperationalProfile::CardboardPackaging && $product)
+            @if($profile === \App\Enums\OperationalProfile::CardboardPackaging && $product && $cardboardProductType === 'box')
                 @php
                     $lengthTotal = \App\Support\CardboardMeasurements::lengthTotal($measurements);
                     $widthTotal = \App\Support\CardboardMeasurements::widthTotal($measurements);
@@ -279,6 +282,34 @@
                         <td>{{ \App\Support\CardboardMeasurements::format($widthTotal) }} {{ $lengthUnit }}</td>
                     </tr>
                     <tr><td colspan="6" class="sheet-size">Tamanho da chapa: {{ \App\Support\CardboardMeasurements::format($lengthTotal) }} × {{ \App\Support\CardboardMeasurements::format($widthTotal) }} {{ $lengthUnit }}</td></tr>
+                </table>
+            @elseif($profile === \App\Enums\OperationalProfile::CardboardPackaging && $product && $cardboardProductType === 'sheet')
+                <table class="measurements-table">
+                    <tr><th>Comprimento</th><th>Largura</th><th>Tamanho da chapa</th></tr>
+                    <tr>
+                        <td>{{ $displayValue($measurements['simple_sheet_length'] ?? null, ' '.$lengthUnit) }}</td>
+                        <td>{{ $displayValue($measurements['simple_sheet_width'] ?? null, ' '.$lengthUnit) }}</td>
+                        <td>{{ \App\Support\CardboardMeasurements::format((float) ($measurements['simple_sheet_length'] ?? 0)) }} × {{ \App\Support\CardboardMeasurements::format((float) ($measurements['simple_sheet_width'] ?? 0)) }} {{ $lengthUnit }}</td>
+                    </tr>
+                </table>
+            @elseif($profile === \App\Enums\OperationalProfile::CardboardPackaging && $product && $cardboardProductType === 'corner')
+                @php
+                    $lengthTotal = \App\Support\CardboardMeasurements::cornerLengthTotal($measurements);
+                    $widthTotal = \App\Support\CardboardMeasurements::cornerWidthTotal($measurements);
+                @endphp
+                <table class="measurements-table">
+                    <tr><th>Comprimento</th><th>Comprimento total</th></tr>
+                    <tr><td>{{ $displayValue($measurements['corner_length'] ?? null, ' '.$lengthUnit) }}</td><td>{{ \App\Support\CardboardMeasurements::format($lengthTotal) }} {{ $lengthUnit }}</td></tr>
+                </table>
+                <table class="measurements-table">
+                    <tr><th>Altura 1</th><th>Largura</th><th>Altura 2</th><th>Largura total</th></tr>
+                    <tr>
+                        <td>{{ $displayValue($measurements['corner_height_1'] ?? null, ' '.$lengthUnit) }}</td>
+                        <td>{{ $displayValue($measurements['corner_width'] ?? null, ' '.$lengthUnit) }}</td>
+                        <td>{{ $displayValue($measurements['corner_height_2'] ?? null, ' '.$lengthUnit) }}</td>
+                        <td>{{ \App\Support\CardboardMeasurements::format($widthTotal) }} {{ $lengthUnit }}</td>
+                    </tr>
+                    <tr><td colspan="4" class="sheet-size">Tamanho da chapa: {{ \App\Support\CardboardMeasurements::format($lengthTotal) }} × {{ \App\Support\CardboardMeasurements::format($widthTotal) }} {{ $lengthUnit }}</td></tr>
                 </table>
             @else
                 <table class="measurements-table">

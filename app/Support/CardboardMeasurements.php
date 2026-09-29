@@ -131,6 +131,16 @@ class CardboardMeasurements
         return self::total($measurements, self::WIDTH_FIELDS);
     }
 
+    public static function cornerLengthTotal(array $measurements): float
+    {
+        return (float) (self::normalize($measurements['corner_length'] ?? null) ?? 0);
+    }
+
+    public static function cornerWidthTotal(array $measurements): float
+    {
+        return self::total($measurements, ['corner_height_1', 'corner_width', 'corner_height_2']);
+    }
+
     public static function format(float $value): string
     {
         return rtrim(rtrim(number_format($value, 3, ',', ''), '0'), ',');
