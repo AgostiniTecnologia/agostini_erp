@@ -240,48 +240,67 @@
                 $cardboardProductType = $product?->cardboard_product_type instanceof \App\Enums\CardboardProductType
                     ? $product->cardboard_product_type->value
                     : ($product?->cardboard_product_type ?: 'box');
+                if ($cardboardProductType === 'briefcase') {
+                    $measurements = $product?->briefcase_measurements ?? [];
+                }
             @endphp
 
             <div class="measurements-title">Item {{ $loop->iteration }}: {{ $product->name ?? 'Produto não encontrado' }}</div>
 
-            @if($profile === \App\Enums\OperationalProfile::CardboardPackaging && $product && $cardboardProductType === 'box')
+            @if($profile === \App\Enums\OperationalProfile::CardboardPackaging && $product && in_array($cardboardProductType, ['box', 'briefcase'], true))
                 @php
-                    $lengthTotal = \App\Support\CardboardMeasurements::lengthTotal($measurements);
-                    $widthTotal = \App\Support\CardboardMeasurements::widthTotal($measurements);
+                    $lengthTotal = $cardboardProductType === 'briefcase'
+                        ? \App\Support\BriefcaseMeasurements::lengthTotal($measurements)
+                        : \App\Support\CardboardMeasurements::lengthTotal($measurements);
+                    $widthTotal = $cardboardProductType === 'briefcase'
+                        ? \App\Support\BriefcaseMeasurements::widthTotal($measurements)
+                        : \App\Support\CardboardMeasurements::widthTotal($measurements);
                 @endphp
                 <table class="measurements-table">
-                    <tr><th colspan="3">Medidas internas</th></tr>
-                    <tr><th>Comprimento interno</th><th>Largura interna</th><th>Altura interna</th></tr>
+                    <tr><th colspan="{{ $cardboardProductType === 'briefcase' ? 4 : 3 }}">{{ $cardboardProductType === 'briefcase' ? 'Medidas da maleta' : 'Medidas internas' }}</th></tr>
+                    <tr><th>{{ $cardboardProductType === 'briefcase' ? 'Comprimento' : 'Comprimento interno' }}</th><th>{{ $cardboardProductType === 'briefcase' ? 'Largura' : 'Largura interna' }}</th><th>{{ $cardboardProductType === 'briefcase' ? 'Altura' : 'Altura interna' }}</th>@if($cardboardProductType === 'briefcase')<th>Altura auxiliar</th>@endif</tr>
                     <tr>
                         <td>{{ $displayValue($measurements['internal_length'] ?? null, ' '.$lengthUnit) }}</td>
                         <td>{{ $displayValue($measurements['internal_width'] ?? null, ' '.$lengthUnit) }}</td>
                         <td>{{ $displayValue($measurements['internal_height'] ?? null, ' '.$lengthUnit) }}</td>
+                        @if($cardboardProductType === 'briefcase')<td>{{ $displayValue($measurements['auxiliary_height'] ?? null, ' '.$lengthUnit) }}</td>@endif
                     </tr>
                 </table>
                 <table class="measurements-table">
                     <tr><th colspan="6">Composição do comprimento da chapa</th></tr>
-                    <tr><th>Aba esquerda</th><th>Altura esquerda</th><th>Comprimento</th><th>Altura direita</th><th>Aba direita</th><th>Total</th></tr>
+                    <tr><th>{{ $cardboardProductType === 'briefcase' ? 'Aba' : 'Aba esquerda' }}</th><th>{{ $cardboardProductType === 'briefcase' ? 'Larg.' : 'Altura esquerda' }}</th><th>Comprimento</th><th>{{ $cardboardProductType === 'briefcase' ? 'Larg.' : 'Altura direita' }}</th><th>{{ $cardboardProductType === 'briefcase' ? 'Comp.' : 'Aba direita' }}</th><th>Total</th></tr>
                     <tr>
                         <td>{{ $displayValue($measurements['left_flap'] ?? null, ' '.$lengthUnit) }}</td>
-                        <td>{{ $displayValue($measurements['left_height'] ?? null, ' '.$lengthUnit) }}</td>
+                        <td>{{ $displayValue($measurements[$cardboardProductType === 'briefcase' ? 'left_width' : 'left_height'] ?? null, ' '.$lengthUnit) }}</td>
                         <td>{{ $displayValue($measurements['sheet_length'] ?? null, ' '.$lengthUnit) }}</td>
-                        <td>{{ $displayValue($measurements['right_height'] ?? null, ' '.$lengthUnit) }}</td>
-                        <td>{{ $displayValue($measurements['right_flap'] ?? null, ' '.$lengthUnit) }}</td>
+                        <td>{{ $displayValue($measurements[$cardboardProductType === 'briefcase' ? 'right_width' : 'right_height'] ?? null, ' '.$lengthUnit) }}</td>
+                        <td>{{ $displayValue($measurements[$cardboardProductType === 'briefcase' ? 'second_length' : 'right_flap'] ?? null, ' '.$lengthUnit) }}</td>
                         <td>{{ \App\Support\CardboardMeasurements::format($lengthTotal) }} {{ $lengthUnit }}</td>
                     </tr>
                 </table>
                 <table class="measurements-table">
                     <tr><th colspan="6">Composição da largura da chapa</th></tr>
-                    <tr><th>Aba superior</th><th>Altura superior</th><th>Largura</th><th>Altura inferior</th><th>Aba inferior</th><th>Total</th></tr>
+                    @if($cardboardProductType === 'briefcase')
+                        <tr><th>Aba</th><th>Altura</th><th>Altura aux.</th><th>Aba</th><th>Total</th></tr>
+                    @else
+                        <tr><th>Aba superior</th><th>Altura superior</th><th>Largura</th><th>Altura inferior</th><th>Aba inferior</th><th>Total</th></tr>
+                    @endif
                     <tr>
-                        <td>{{ $displayValue($measurements['top_flap'] ?? null, ' '.$lengthUnit) }}</td>
-                        <td>{{ $displayValue($measurements['top_height'] ?? null, ' '.$lengthUnit) }}</td>
-                        <td>{{ $displayValue($measurements['sheet_width'] ?? null, ' '.$lengthUnit) }}</td>
-                        <td>{{ $displayValue($measurements['bottom_height'] ?? null, ' '.$lengthUnit) }}</td>
-                        <td>{{ $displayValue($measurements['bottom_flap'] ?? null, ' '.$lengthUnit) }}</td>
+                        @if($cardboardProductType === 'briefcase')
+                            <td>{{ $displayValue($measurements['top_flap'] ?? null, ' '.$lengthUnit) }}</td>
+                            <td>{{ $displayValue($measurements['height'] ?? null, ' '.$lengthUnit) }}</td>
+                            <td>{{ $displayValue($measurements['width_auxiliary_height'] ?? null, ' '.$lengthUnit) }}</td>
+                            <td>{{ $displayValue($measurements['bottom_flap'] ?? null, ' '.$lengthUnit) }}</td>
+                        @else
+                            <td>{{ $displayValue($measurements['top_flap'] ?? null, ' '.$lengthUnit) }}</td>
+                            <td>{{ $displayValue($measurements['top_height'] ?? null, ' '.$lengthUnit) }}</td>
+                            <td>{{ $displayValue($measurements['sheet_width'] ?? null, ' '.$lengthUnit) }}</td>
+                            <td>{{ $displayValue($measurements['bottom_height'] ?? null, ' '.$lengthUnit) }}</td>
+                            <td>{{ $displayValue($measurements['bottom_flap'] ?? null, ' '.$lengthUnit) }}</td>
+                        @endif
                         <td>{{ \App\Support\CardboardMeasurements::format($widthTotal) }} {{ $lengthUnit }}</td>
                     </tr>
-                    <tr><td colspan="6" class="sheet-size">Tamanho da chapa: {{ \App\Support\CardboardMeasurements::format($lengthTotal) }} × {{ \App\Support\CardboardMeasurements::format($widthTotal) }} {{ $lengthUnit }}</td></tr>
+                    <tr><td colspan="{{ $cardboardProductType === 'briefcase' ? 5 : 6 }}" class="sheet-size">Tamanho da chapa: {{ \App\Support\CardboardMeasurements::format($lengthTotal) }} × {{ \App\Support\CardboardMeasurements::format($widthTotal) }} {{ $lengthUnit }}</td></tr>
                 </table>
             @elseif($profile === \App\Enums\OperationalProfile::CardboardPackaging && $product && $cardboardProductType === 'sheet')
                 <table class="measurements-table">

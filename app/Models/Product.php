@@ -6,6 +6,7 @@ use App\Enums\CardboardProductType;
 use App\Enums\CardboardSheetType;
 use App\Models\Scopes\TenantScope;
 use App\Services\OperationalProfileResolver;
+use App\Support\BriefcaseMeasurements;
 use App\Support\CompanyMeasurementSettings;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -49,6 +50,7 @@ class Product extends Model
         'width',
         'height',
         'cardboard_measurements',
+        'briefcase_measurements',
         'cardboard_product_type',
         'cardboard_sheet_type',
         'fold_margin',
@@ -65,6 +67,7 @@ class Product extends Model
         'sale_price' => 'decimal:2',
         'minimum_sale_price' => 'decimal:2',
         'cardboard_measurements' => 'array',
+        'briefcase_measurements' => 'array',
         'cardboard_product_type' => CardboardProductType::class,
         'cardboard_sheet_type' => CardboardSheetType::class,
         'fold_margin' => 'decimal:3',
@@ -134,6 +137,7 @@ class Product extends Model
 
             if (Auth::check() && ! app(OperationalProfileResolver::class)->isCardboardPackaging()) {
                 unset($model->cardboard_measurements);
+                unset($model->briefcase_measurements);
                 unset($model->cardboard_product_type);
                 unset($model->cardboard_sheet_type);
                 unset($model->fold_margin);
@@ -142,6 +146,19 @@ class Product extends Model
 
             if (! self::hasMeasurements($model)) {
                 $model->cardboard_measurements = null;
+            }
+
+            if (! self::hasBriefcaseMeasurements($model->briefcase_measurements)) {
+                $model->briefcase_measurements = null;
+            }
+
+            if (self::isBriefcase($model) && self::hasInternalMeasurements($model->briefcase_measurements)
+                && app(OperationalProfileResolver::class)->isCardboardPackaging()) {
+                $company = CompanyMeasurementSettings::company();
+                $model->briefcase_measurements = BriefcaseMeasurements::fillMissingComposition(
+                    $model->briefcase_measurements,
+                    self::foldMargin($model, $company),
+                );
             }
 
             if (self::isBox($model) && self::hasInternalMeasurements($model->cardboard_measurements)
@@ -162,6 +179,12 @@ class Product extends Model
                 $product->cardboard_measurements = $product->getOriginal('cardboard_measurements');
             }
 
+            if (Auth::check()
+                && $product->isDirty('briefcase_measurements')
+                && ! app(OperationalProfileResolver::class)->isCardboardPackaging()) {
+                $product->briefcase_measurements = $product->getOriginal('briefcase_measurements');
+            }
+
             if (Auth::check() && ! app(OperationalProfileResolver::class)->isCardboardPackaging()) {
                 foreach (['cardboard_product_type', 'cardboard_sheet_type', 'fold_margin', 'length_flap_default'] as $setting) {
                     if ($product->isDirty($setting)) {
@@ -174,6 +197,23 @@ class Product extends Model
                 && app(OperationalProfileResolver::class)->isCardboardPackaging()
                 && ! self::hasMeasurements($product)) {
                 $product->cardboard_measurements = null;
+            }
+
+            if ($product->isDirty('briefcase_measurements')
+                && app(OperationalProfileResolver::class)->isCardboardPackaging()
+                && ! self::hasBriefcaseMeasurements($product->briefcase_measurements)) {
+                $product->briefcase_measurements = null;
+            }
+
+            if ($product->isDirty('briefcase_measurements')
+                && self::isBriefcase($product)
+                && self::hasInternalMeasurements($product->briefcase_measurements)
+                && app(OperationalProfileResolver::class)->isCardboardPackaging()) {
+                $company = CompanyMeasurementSettings::company();
+                $product->briefcase_measurements = BriefcaseMeasurements::fillMissingComposition(
+                    $product->briefcase_measurements ?? [],
+                    self::foldMargin($product, $company),
+                );
             }
 
             if ($product->isDirty('cardboard_measurements')
@@ -203,6 +243,15 @@ class Product extends Model
             CardboardProductType::Sheet => ['simple_sheet_length', 'simple_sheet_width'],
             CardboardProductType::Corner => ['corner_length', 'corner_height_1', 'corner_width', 'corner_height_2'],
             CardboardProductType::Standard => [],
+            CardboardProductType::Briefcase => [
+                ...\App\Support\CardboardMeasurements::INTERNAL_FIELDS,
+                'simple_sheet_length',
+                'simple_sheet_width',
+                'corner_length',
+                'corner_height_1',
+                'corner_width',
+                'corner_height_2',
+            ],
             default => \App\Support\CardboardMeasurements::INTERNAL_FIELDS,
         };
 
@@ -212,6 +261,17 @@ class Product extends Model
     private static function isBox(Model $product): bool
     {
         return self::productType($product) === CardboardProductType::Box;
+    }
+
+    private static function isBriefcase(Model $product): bool
+    {
+        return self::productType($product) === CardboardProductType::Briefcase;
+    }
+
+    private static function hasBriefcaseMeasurements(?array $measurements): bool
+    {
+        return collect(BriefcaseMeasurements::INPUT_FIELDS)
+            ->contains(fn (string $field): bool => filled($measurements[$field] ?? null));
     }
 
     private static function productType(Model $product): CardboardProductType

@@ -10,14 +10,16 @@ enum CardboardProductType: string implements HasLabel
     case Box = 'box';
     case Sheet = 'sheet';
     case Corner = 'corner';
+    case Briefcase = 'briefcase';
 
     public function getLabel(): ?string
     {
         return match ($this) {
             self::Standard => 'Padrão',
-            self::Box => 'Caixa de papelão',
+            self::Box => 'Caixa envoltório',
             self::Sheet => 'Chapa',
             self::Corner => 'Cantoneira',
+            self::Briefcase => 'Caixa Maleta',
         };
     }
 }

@@ -88,12 +88,14 @@ class ProductResource extends Resource
                                         CardboardProductType::Box->value => 'heroicon-o-cube',
                                         CardboardProductType::Sheet->value => 'heroicon-o-rectangle-stack',
                                         CardboardProductType::Corner->value => 'heroicon-o-chevron-double-right',
+                                        CardboardProductType::Briefcase->value => 'heroicon-o-briefcase',
                                     ])
                                     ->colors([
                                         CardboardProductType::Standard->value => 'gray',
                                         CardboardProductType::Box->value => 'primary',
                                         CardboardProductType::Sheet->value => 'info',
                                         CardboardProductType::Corner->value => 'warning',
+                                        CardboardProductType::Briefcase->value => 'success',
                                     ])
                                     ->default(CardboardProductType::Box->value)
                                     ->afterStateHydrated(function (Forms\Components\ToggleButtons $component, mixed $state): void {

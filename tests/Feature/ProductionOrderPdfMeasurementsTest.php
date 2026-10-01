@@ -129,6 +129,38 @@ class ProductionOrderPdfMeasurementsTest extends TestCase
         $this->assertStringNotContainsString('Tamanho da chapa', $html);
     }
 
+    public function test_briefcase_configuration_uses_its_own_measurements_in_production_order(): void
+    {
+        $product = new Product([
+            'name' => 'Maleta A',
+            'cardboard_product_type' => CardboardProductType::Briefcase,
+            'cardboard_measurements' => ['internal_length' => '999'],
+            'briefcase_measurements' => [
+                'internal_length' => '100',
+                'internal_width' => '40',
+                'internal_height' => '20',
+                'auxiliary_height' => '30',
+                'left_flap' => '60',
+                'left_width' => '45',
+                'sheet_length' => '105',
+                'right_width' => '45',
+                'second_length' => '105',
+                'top_flap' => '60',
+                'height' => '25',
+                'width_auxiliary_height' => '35',
+                'bottom_flap' => '60',
+            ],
+        ]);
+
+        $html = view('pdf.production_order', [
+            'order' => $this->order(OperationalProfile::CardboardPackaging, $product),
+        ])->render();
+
+        $this->assertStringContainsString('Medidas da maleta', $html);
+        $this->assertStringContainsString('Tamanho da chapa: 360 × 155 mm', $html);
+        $this->assertStringNotContainsString('999 mm', $html);
+    }
+
     public function test_qr_code_generation_expression_remains_present(): void
     {
         $template = file_get_contents(resource_path('views/pdf/production_order.blade.php'));

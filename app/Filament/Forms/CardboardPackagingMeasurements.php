@@ -4,6 +4,7 @@ namespace App\Filament\Forms;
 
 use App\Enums\CardboardProductType;
 use App\Enums\CardboardSheetType;
+use App\Support\BriefcaseMeasurements;
 use App\Support\CardboardMeasurements;
 use App\Support\CompanyMeasurementSettings;
 use Closure;
@@ -92,6 +93,70 @@ class CardboardPackagingMeasurements
                         })
                         ->columnSpanFull(),
                 ]),
+            Section::make('Medidas da maleta')
+                ->visible(fn (Get $get): bool => self::productType($get) === CardboardProductType::Briefcase)
+                ->schema([
+                    Section::make('Parâmetros de cálculo deste produto')
+                        ->description('Os valores vêm do padrão da empresa. Alterações feitas aqui valem somente para este produto.')
+                        ->schema([
+                            self::sheetType('briefcase_measurements'),
+                            self::foldMargin('briefcase_measurements'),
+                        ])
+                        ->columns(['default' => 1, 'md' => 2]),
+                    Section::make('Medidas')
+                        ->schema([
+                            self::measurement('internal_length', 'Comprimento', true, 'briefcase_measurements'),
+                            self::measurement('internal_width', 'Largura', true, 'briefcase_measurements'),
+                            self::measurement('internal_height', 'Altura', true, 'briefcase_measurements'),
+                            self::measurement('auxiliary_height', 'Altura auxiliar', true, 'briefcase_measurements'),
+                            Actions::make([
+                                Action::make('clear_briefcase_measurements')
+                                    ->label('Limpar medidas')
+                                    ->icon('heroicon-o-trash')
+                                    ->color('danger')
+                                    ->requiresConfirmation()
+                                    ->modalHeading('Limpar todas as medidas da maleta?')
+                                    ->modalDescription('As medidas internas e todos os cálculos automáticos serão removidos.')
+                                    ->action(fn (Set $set) => $set(
+                                        'briefcase_measurements',
+                                        BriefcaseMeasurements::emptyState(),
+                                    )),
+                            ])->columnSpanFull(),
+                        ])
+                        ->columns(['default' => 1, 'md' => 2, 'lg' => 4]),
+                    Section::make('Composição do comprimento da chapa')
+                        ->description('Calculada automaticamente e liberada para ajuste manual quando necessário.')
+                        ->schema([
+                            self::measurement('left_flap', 'Aba', false, 'briefcase_measurements'),
+                            self::measurement('left_width', 'Larg.', false, 'briefcase_measurements'),
+                            self::measurement('sheet_length', 'Comprimento', false, 'briefcase_measurements'),
+                            self::measurement('right_width', 'Larg.', false, 'briefcase_measurements'),
+                            self::measurement('second_length', 'Comp.', false, 'briefcase_measurements'),
+                            self::total('Comprimento total', BriefcaseMeasurements::LENGTH_FIELDS, 'briefcase_measurements'),
+                        ])
+                        ->columns(['default' => 1, 'md' => 3, 'xl' => 6]),
+                    Section::make('Composição da largura da chapa')
+                        ->description('Calculada automaticamente e liberada para ajuste manual quando necessário.')
+                        ->schema([
+                            self::measurement('top_flap', 'Aba', false, 'briefcase_measurements'),
+                            self::measurement('height', 'Altura', false, 'briefcase_measurements'),
+                            self::measurement('width_auxiliary_height', 'Altura aux.', false, 'briefcase_measurements'),
+                            self::measurement('bottom_flap', 'Aba', false, 'briefcase_measurements'),
+                            self::total('Largura total', BriefcaseMeasurements::WIDTH_FIELDS, 'briefcase_measurements'),
+                        ])
+                        ->columns(['default' => 1, 'md' => 3, 'xl' => 6]),
+                    Placeholder::make('briefcase_sheet_size')
+                        ->label('Tamanho da chapa')
+                        ->content(function (Get $get): HtmlString {
+                            $measurements = self::measurements($get, 'briefcase_measurements');
+                            $length = CardboardMeasurements::format(BriefcaseMeasurements::lengthTotal($measurements));
+                            $width = CardboardMeasurements::format(BriefcaseMeasurements::widthTotal($measurements));
+                            $unit = CompanyMeasurementSettings::lengthUnit();
+
+                            return new HtmlString("<strong>{$length} × {$width} {$unit}</strong>");
+                        })
+                        ->columnSpanFull(),
+                ]),
             Section::make('Medidas da chapa')
                 ->visible(fn (Get $get): bool => self::productType($get) === CardboardProductType::Sheet)
                 ->schema([
@@ -157,9 +222,13 @@ class CardboardPackagingMeasurements
             : CardboardProductType::tryFrom((string) $type) ?? CardboardProductType::Box;
     }
 
-    private static function measurement(string $name, string $label, bool $recalculate = false): TextInput
-    {
-        $input = TextInput::make("cardboard_measurements.{$name}")
+    private static function measurement(
+        string $name,
+        string $label,
+        bool $recalculate = false,
+        string $statePath = 'cardboard_measurements',
+    ): TextInput {
+        $input = TextInput::make("{$statePath}.{$name}")
             ->label($label)
             ->suffix(fn (): string => CompanyMeasurementSettings::lengthUnit())
             ->inputMode('decimal')
@@ -186,12 +255,12 @@ class CardboardPackagingMeasurements
             ]);
 
         if ($recalculate) {
-            $input->afterStateUpdated(fn (Get $get, Set $set) => self::recalculate($get, $set));
+            $input->afterStateUpdated(fn (Get $get, Set $set) => self::recalculate($get, $set, $statePath));
 
             if ($name === 'internal_height') {
-                $input->afterStateHydrated(function (Get $get, Set $set): void {
-                    if (! self::hasComposition($get)) {
-                        self::recalculate($get, $set);
+                $input->afterStateHydrated(function (Get $get, Set $set) use ($statePath): void {
+                    if (! self::hasComposition($get, $statePath)) {
+                        self::recalculate($get, $set, $statePath);
                     }
                 });
             }
@@ -205,6 +274,7 @@ class CardboardPackagingMeasurements
         string $label,
         string $companyAttribute,
         float $fallback,
+        string $statePath = 'cardboard_measurements',
     ): TextInput {
         return TextInput::make($name)
             ->label($label)
@@ -219,10 +289,10 @@ class CardboardPackagingMeasurements
                 }
             })
             ->live(onBlur: true)
-            ->afterStateUpdated(fn (Get $get, Set $set) => self::recalculate($get, $set));
+            ->afterStateUpdated(fn (Get $get, Set $set) => self::recalculate($get, $set, $statePath));
     }
 
-    private static function sheetType(): Select
+    private static function sheetType(string $statePath = 'cardboard_measurements'): Select
     {
         return Select::make('cardboard_sheet_type')
             ->label('Tipo de chapa')
@@ -236,13 +306,13 @@ class CardboardPackagingMeasurements
                     $component->state(CardboardSheetType::Simple->value);
                 }
             })
-            ->afterStateUpdated(function (mixed $state, Get $get, Set $set): void {
+            ->afterStateUpdated(function (mixed $state, Get $get, Set $set) use ($statePath): void {
                 $set('fold_margin', self::companyFoldMargin($state));
-                self::recalculate($get, $set);
+                self::recalculate($get, $set, $statePath);
             });
     }
 
-    private static function foldMargin(): TextInput
+    private static function foldMargin(string $statePath = 'cardboard_measurements'): TextInput
     {
         return TextInput::make('fold_margin')
             ->label(fn (Get $get): string => self::sheetTypeValue($get('cardboard_sheet_type')) === CardboardSheetType::Double
@@ -259,44 +329,49 @@ class CardboardPackagingMeasurements
                 }
             })
             ->live(onBlur: true)
-            ->afterStateUpdated(fn (Get $get, Set $set) => self::recalculate($get, $set));
+            ->afterStateUpdated(fn (Get $get, Set $set) => self::recalculate($get, $set, $statePath));
     }
 
-    private static function total(string $label, array $fields): Placeholder
+    private static function total(string $label, array $fields, string $statePath = 'cardboard_measurements'): Placeholder
     {
         return Placeholder::make(str($label)->snake()->toString())
             ->label($label)
-            ->content(function (Get $get) use ($fields): string {
+            ->content(function (Get $get) use ($fields, $statePath): string {
                 return CardboardMeasurements::format(
-                    CardboardMeasurements::total(self::measurements($get), $fields),
+                    CardboardMeasurements::total(self::measurements($get, $statePath), $fields),
                 ).' '.CompanyMeasurementSettings::lengthUnit();
             });
     }
 
-    private static function measurements(Get $get): array
+    private static function measurements(Get $get, string $statePath = 'cardboard_measurements'): array
     {
-        return (array) ($get('cardboard_measurements') ?? []);
+        return (array) ($get($statePath) ?? []);
     }
 
-    private static function hasComposition(Get $get): bool
+    private static function hasComposition(Get $get, string $statePath = 'cardboard_measurements'): bool
     {
-        $measurements = self::measurements($get);
+        $measurements = self::measurements($get, $statePath);
 
         return collect([...CardboardMeasurements::LENGTH_FIELDS, ...CardboardMeasurements::WIDTH_FIELDS])
             ->contains(fn (string $field): bool => array_key_exists($field, $measurements));
     }
 
-    private static function recalculate(Get $get, Set $set): void
+    private static function recalculate(Get $get, Set $set, string $statePath = 'cardboard_measurements'): void
     {
-        $calculated = CardboardMeasurements::fromInternalDimensions(
-            self::measurements($get),
-            $get('fold_margin') ?? self::companyFoldMargin($get('cardboard_sheet_type')),
-            $get('length_flap_default') ?? CompanyMeasurementSettings::company()?->length_flap_default ?? 60,
-        );
+        $calculated = $statePath === 'briefcase_measurements'
+            ? BriefcaseMeasurements::fromDimensions(
+                self::measurements($get, $statePath),
+                $get('fold_margin') ?? self::companyFoldMargin($get('cardboard_sheet_type')),
+            )
+            : CardboardMeasurements::fromInternalDimensions(
+                self::measurements($get, $statePath),
+                $get('fold_margin') ?? self::companyFoldMargin($get('cardboard_sheet_type')),
+                $get('length_flap_default') ?? CompanyMeasurementSettings::company()?->length_flap_default ?? 60,
+            );
 
         foreach ($calculated as $field => $value) {
-            if (! str_starts_with($field, 'internal_')) {
-                $set("cardboard_measurements.{$field}", $value);
+            if (! str_starts_with($field, 'internal_') && $field !== 'auxiliary_height') {
+                $set("{$statePath}.{$field}", $value);
             }
         }
     }

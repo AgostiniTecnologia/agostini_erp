@@ -18,10 +18,18 @@ class ProductTechnicalSheetPdfController extends Controller
 
         Gate::authorize('view', $product);
 
+        $measurements = $product->cardboard_product_type === \App\Enums\CardboardProductType::Briefcase
+            ? ($product->briefcase_measurements ?? [])
+            : ($product->cardboard_measurements ?? []);
+
         $pdf = Pdf::loadView('pdf.product_technical_sheet', [
             'product' => $product,
-            'lengthTotal' => CardboardMeasurements::lengthTotal($product->cardboard_measurements ?? []),
-            'widthTotal' => CardboardMeasurements::widthTotal($product->cardboard_measurements ?? []),
+            'lengthTotal' => $product->cardboard_product_type === \App\Enums\CardboardProductType::Briefcase
+                ? \App\Support\BriefcaseMeasurements::lengthTotal($measurements)
+                : CardboardMeasurements::lengthTotal($measurements),
+            'widthTotal' => $product->cardboard_product_type === \App\Enums\CardboardProductType::Briefcase
+                ? \App\Support\BriefcaseMeasurements::widthTotal($measurements)
+                : CardboardMeasurements::widthTotal($measurements),
         ])->setPaper('a4', 'portrait');
 
         $name = Str::slug($product->name) ?: $product->uuid;

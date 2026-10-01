@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\CardboardProductType;
 use App\Enums\CardboardSheetType;
 use App\Enums\OperationalProfile;
 use App\Models\Company;
@@ -98,6 +99,56 @@ class OperationalProfileTest extends TestCase
         ]);
 
         $this->assertSame($measurements, $product->fresh()->cardboard_measurements);
+    }
+
+    public function test_briefcase_measurements_are_calculated_persisted_and_kept_separate_from_box(): void
+    {
+        $company = Company::factory()->create([
+            'operational_profile' => OperationalProfile::CardboardPackaging,
+            'fold_margin' => 5,
+            'length_flap_default' => 60,
+        ]);
+        $this->actingAs(User::factory()->for($company)->create());
+
+        $boxMeasurements = ['internal_length' => '999'];
+        $product = Product::factory()->forCompany($company)->create([
+            'cardboard_product_type' => CardboardProductType::Briefcase,
+            'cardboard_measurements' => $boxMeasurements,
+            'briefcase_measurements' => [
+                'internal_length' => '100',
+                'internal_width' => '40',
+                'internal_height' => '20',
+                'auxiliary_height' => '30',
+            ],
+        ])->fresh();
+
+        $this->assertSame($boxMeasurements, $product->cardboard_measurements);
+        $this->assertSame('105', $product->briefcase_measurements['sheet_length']);
+        $this->assertSame('45', $product->briefcase_measurements['left_width']);
+        $this->assertSame('105', $product->briefcase_measurements['second_length']);
+        $this->assertNull($product->briefcase_measurements['top_flap']);
+        $this->assertSame('25', $product->briefcase_measurements['height']);
+        $this->assertSame('35', $product->briefcase_measurements['width_auxiliary_height']);
+    }
+
+    public function test_clearing_briefcase_measurements_does_not_clear_box_measurements(): void
+    {
+        $company = Company::factory()->create([
+            'operational_profile' => OperationalProfile::CardboardPackaging,
+        ]);
+        $this->actingAs(User::factory()->for($company)->create());
+
+        $product = Product::factory()->forCompany($company)->create([
+            'cardboard_product_type' => CardboardProductType::Briefcase,
+            'cardboard_measurements' => ['internal_length' => '999'],
+            'briefcase_measurements' => ['internal_length' => '100'],
+        ]);
+
+        $product->update(['briefcase_measurements' => \App\Support\CardboardMeasurements::emptyState()]);
+        $product->refresh();
+
+        $this->assertNull($product->briefcase_measurements);
+        $this->assertSame(['internal_length' => '999'], $product->cardboard_measurements);
     }
 
     public function test_cardboard_cut_measurements_use_the_company_configuration(): void

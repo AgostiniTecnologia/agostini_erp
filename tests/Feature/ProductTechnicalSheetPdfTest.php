@@ -106,6 +106,32 @@ class ProductTechnicalSheetPdfTest extends TestCase
         $this->assertStringContainsString('Tamanho da chapa: 1000 × 120 mm', $html);
     }
 
+    public function test_briefcase_configuration_uses_its_own_measurements_in_technical_sheet(): void
+    {
+        $company = Company::factory()->create([
+            'operational_profile' => OperationalProfile::CardboardPackaging,
+            'length_unit' => 'mm',
+        ]);
+        $this->actingAs(User::factory()->for($company)->create());
+        $product = Product::factory()->forCompany($company)->create([
+            'cardboard_product_type' => CardboardProductType::Briefcase,
+            'cardboard_measurements' => ['internal_length' => '999'],
+            'briefcase_measurements' => [
+                'internal_length' => '100',
+                'internal_width' => '40',
+                'internal_height' => '20',
+                'auxiliary_height' => '30',
+            ],
+        ])->fresh();
+
+        $html = $this->technicalSheetHtml($product);
+
+        $this->assertStringContainsString('Medidas da maleta', $html);
+        $this->assertStringContainsString('Altura auxiliar', $html);
+        $this->assertStringContainsString('Tamanho da chapa: 300 × 35 mm', $html);
+        $this->assertStringNotContainsString('999 mm', $html);
+    }
+
     public function test_standard_company_always_uses_the_standard_technical_sheet(): void
     {
         $company = Company::factory()->create([
@@ -139,10 +165,18 @@ class ProductTechnicalSheetPdfTest extends TestCase
     {
         $product->load(['company', 'rawMaterials', 'productionSteps']);
 
+        $measurements = $product->cardboard_product_type === CardboardProductType::Briefcase
+            ? ($product->briefcase_measurements ?? [])
+            : ($product->cardboard_measurements ?? []);
+
         return view('pdf.product_technical_sheet', [
             'product' => $product,
-            'lengthTotal' => \App\Support\CardboardMeasurements::lengthTotal($product->cardboard_measurements ?? []),
-            'widthTotal' => \App\Support\CardboardMeasurements::widthTotal($product->cardboard_measurements ?? []),
+            'lengthTotal' => $product->cardboard_product_type === CardboardProductType::Briefcase
+                ? \App\Support\BriefcaseMeasurements::lengthTotal($measurements)
+                : \App\Support\CardboardMeasurements::lengthTotal($measurements),
+            'widthTotal' => $product->cardboard_product_type === CardboardProductType::Briefcase
+                ? \App\Support\BriefcaseMeasurements::widthTotal($measurements)
+                : \App\Support\CardboardMeasurements::widthTotal($measurements),
         ])->render();
     }
 }
