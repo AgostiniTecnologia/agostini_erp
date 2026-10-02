@@ -51,15 +51,20 @@ class ProductionOrderResource extends Resource
                         Forms\Components\Select::make('status')
                             ->label('Status')
                             ->hiddenOn('create')
-                            ->options([
-                                'Pendente' => 'Pendente',
-                                'Planejada' => 'Planejada',
-                                'Liberada' => 'Liberada',
-                                'Em Andamento' => 'Em Andamento',
-                                'Pausada' => 'Pausada',
-                                'Concluída' => 'Concluída',
-                                'Cancelada' => 'Cancelada',
-                            ])
+                            ->options(function (?ProductionOrder $record): array {
+                                $options = [
+                                    'Pendente' => 'Pendente',
+                                    'Planejada' => 'Planejada',
+                                    'Liberada' => 'Liberada',
+                                    'Cancelada' => 'Cancelada',
+                                ];
+
+                                if ($record && in_array($record->status, ProductionOrder::automaticallyManagedStatuses(), true)) {
+                                    $options[$record->status] = $record->status.' (automático)';
+                                }
+
+                                return $options;
+                            })
                             ->required()
                             ->default('Pendente')
                             ->searchable()

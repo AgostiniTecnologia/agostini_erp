@@ -360,6 +360,9 @@ class UserTaskControl extends Component
             $this->currentTask->update($updateDataUserCurrentTask);
             Log::info('UserTaskControl: pauseTask() - UserCurrentTask atualizado.');
 
+            $this->currentTask->productionOrderItem->productionOrder->pauseProduction();
+            Log::info('UserTaskControl: pauseTask() - Ordem de Produção pausada automaticamente.');
+
             $taskPauseLogData = [
                 'user_current_task_uuid' => $this->currentTask->uuid,
                 'production_order_item_uuid' => $this->currentTask->production_order_item_uuid,
@@ -433,6 +436,9 @@ class UserTaskControl extends Component
                 'last_pause_at' => null,
             ]);
             Log::info('UserTaskControl: resumeTask() - UserCurrentTask atualizado para active.');
+
+            $this->currentTask->productionOrderItem->productionOrder->startProduction();
+            Log::info('UserTaskControl: resumeTask() - Ordem de Produção retomada automaticamente.');
 
             $lastPauseLog = TaskPauseLog::where('user_current_task_uuid', $this->currentTask->uuid)
                 ->whereNull('resumed_at')

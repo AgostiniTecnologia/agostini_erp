@@ -138,10 +138,10 @@ class CardboardPackagingMeasurements
                     Section::make('Composição da largura da chapa')
                         ->description('Calculada automaticamente e liberada para ajuste manual quando necessário.')
                         ->schema([
-                            self::measurement('top_flap', 'Aba', false, 'briefcase_measurements'),
+                            self::measurement('top_flap', 'Aba 1', false, 'briefcase_measurements'),
                             self::measurement('height', 'Altura', false, 'briefcase_measurements'),
                             self::measurement('width_auxiliary_height', 'Altura aux.', false, 'briefcase_measurements'),
-                            self::measurement('bottom_flap', 'Aba', false, 'briefcase_measurements'),
+                            self::measurement('bottom_flap', 'Aba 2', false, 'briefcase_measurements'),
                             self::total('Largura total', BriefcaseMeasurements::WIDTH_FIELDS, 'briefcase_measurements'),
                         ])
                         ->columns(['default' => 1, 'md' => 3, 'xl' => 6]),

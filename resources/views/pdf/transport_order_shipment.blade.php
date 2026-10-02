@@ -77,10 +77,21 @@
             padding-bottom: 0;
         }
 
-        .qr-code {
-            float: left;
-            margin-right: 10px;
-            margin-left: 0;
+        .item-layout {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+
+        .item-layout > tbody > tr > td {
+            border: none;
+            padding: 0;
+            vertical-align: top;
+        }
+
+        .item-layout .qr-code {
+            width: 12%;
+            padding-right: 8px;
         }
 
         .qr-code img {
@@ -88,12 +99,58 @@
             height: 60px;
         }
 
-        .item-info {
-            overflow: hidden;
+        .item-layout .item-info {
+            width: 88%;
         }
 
         .item-info p {
             margin: 2px 0;
+        }
+
+        .item-products {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+
+        .item-products th,
+        .item-products td {
+            border: 1px solid #ccc;
+            padding: 3px;
+            text-align: left;
+            vertical-align: middle;
+            overflow-wrap: break-word;
+            word-wrap: break-word;
+        }
+
+        .item-products th {
+            background-color: #f0f0f0;
+            font-size: 8px;
+        }
+
+        .item-products .product-column {
+            width: 30%;
+        }
+
+        .item-products .unit-column {
+            width: 8%;
+        }
+
+        .item-products .quantity-column {
+            width: 12%;
+        }
+
+        .item-products .weight-column {
+            width: 14%;
+        }
+
+        .item-products .value-column {
+            width: 18%;
+        }
+
+        .item-products .numeric {
+            text-align: right;
+            white-space: nowrap;
         }
 
         .order-total {
@@ -188,22 +245,57 @@
                 </div>
 
                 @foreach($clientItems as $itemIndex => $item)
+                    @php
+                        $unitPrice = (float) ($item->salesOrderItem?->final_price
+                            ?? $item->product?->sale_price
+                            ?? 0);
+                        $itemTotal = (float) $item->quantity * $unitPrice;
+                        $weightUnit = $transportOrder->company?->weight_unit?->value ?? 'kg';
+                    @endphp
                     <div class="item-details clearfix">
-                        <div class="qr-code">
-                            <img src="data:image/png;base64,{{ DNS2D::getBarcodePNG($item->uuid, 'QRCODE', 2,2) }}"
-                                 alt="QR Code">
-                        </div>
-                        <div class="item-info">
-                            <p class="product-name-highlight">
-                                {{ $item->product->name ?? 'N/A' }}
-                            </p>
-                            <p>
-                                <strong>Quantidade:</strong> {{ number_format($item->quantity, 2, ',', '.') }} {{ $item->product->unit_of_measure ?? '' }}
-                            </p>
-                            @if($item->notes)
-                                <p><strong>Obs. Item:</strong> {{ $item->notes }}</p>
-                            @endif
-                        </div>
+                        <table class="item-layout">
+                            <colgroup>
+                                <col style="width: 12%;">
+                                <col style="width: 88%;">
+                            </colgroup>
+                            <tbody>
+                                <tr>
+                                    <td class="qr-code">
+                                        <img src="data:image/png;base64,{{ DNS2D::getBarcodePNG($item->uuid, 'QRCODE', 2,2) }}"
+                                             alt="QR Code">
+                                    </td>
+                                    <td class="item-info">
+                                        <table class="item-products">
+                                            <thead>
+                                                <tr>
+                                                    <th class="product-column">Nome do produto</th>
+                                                    <th class="unit-column">Unidade</th>
+                                                    <th class="quantity-column">Quantidade</th>
+                                                    <th class="weight-column">Peso Bruto</th>
+                                                    <th class="value-column">Valor Unitário</th>
+                                                    <th class="value-column">Valor Total</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr>
+                                                    <td>{{ $item->product->name ?? 'N/A' }}</td>
+                                                    <td>{{ $item->product->unit_of_measure ?? 'N/A' }}</td>
+                                                    <td class="numeric">{{ number_format($item->quantity, 2, ',', '.') }}</td>
+                                                    <td class="numeric">
+                                                        {{ filled($item->product?->weight) ? number_format((float) $item->product->weight, 3, ',', '.').' '.$weightUnit : 'N/A' }}
+                                                    </td>
+                                                    <td class="numeric">R$ {{ number_format($unitPrice, 2, ',', '.') }}</td>
+                                                    <td class="numeric">R$ {{ number_format($itemTotal, 2, ',', '.') }}</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                        @if($item->notes)
+                                            <p><strong>Obs. Item:</strong> {{ $item->notes }}</p>
+                                        @endif
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 @endforeach
 

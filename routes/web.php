@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\TimeClockReportController;
 use App\Http\Controllers\Api\TransporteReportController;
 use App\Http\Controllers\DashboardProductionPdfController;
 use App\Http\Controllers\FinancialReportPdfController;
+use App\Http\Controllers\FinancialTransactionReportPdfController;
 use App\Http\Controllers\PricingTablePdfController;
 use App\Http\Controllers\ProductionOrderPdfController;
 use App\Http\Controllers\ProductTechnicalSheetPdfController;
@@ -45,6 +46,9 @@ Route::middleware(['auth'])->group(function () {
 
     Route::get('/financial-report/pdf', FinancialReportPdfController::class)
         ->name('financial.report.pdf');
+
+    Route::get('/financial-transactions/report/pdf', FinancialTransactionReportPdfController::class)
+        ->name('financial-transactions.report.pdf');
 
     Route::get('/pricing-table/pdf', [PricingTablePdfController::class, 'generatePdf'])
         ->name('pricing-table.pdf');

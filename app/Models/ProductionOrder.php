@@ -11,13 +11,17 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Auth; // <-- Import the Auth facade
 use Illuminate\Support\Carbon; // Importar Carbon para now()
+use Illuminate\Validation\ValidationException;
 
 class ProductionOrder extends Model
 {
     use HasFactory, HasUuids, SoftDeletes;
 
-    const STATUS_COMPLETED = 'Concluída';
-    const STATUS_IN_PROGRESS = 'Em Andamento';
+    public const STATUS_COMPLETED = 'Concluída';
+    public const STATUS_IN_PROGRESS = 'Em Andamento';
+    public const STATUS_PAUSED = 'Pausada';
+
+    private bool $automatedStatusTransition = false;
     protected $primaryKey = 'uuid';
     public $incrementing = false;
     protected $keyType = 'string';
@@ -94,7 +98,20 @@ class ProductionOrder extends Model
         if ($this->status !== self::STATUS_COMPLETED) {
             $this->status = self::STATUS_IN_PROGRESS;
         }
-        $this->save();
+        $this->saveAutomatedStatusTransition();
+    }
+
+    /**
+     * Pausa automaticamente a OP junto com a tarefa em execução.
+     */
+    public function pauseProduction(): void
+    {
+        if ($this->status === self::STATUS_COMPLETED) {
+            return;
+        }
+
+        $this->status = self::STATUS_PAUSED;
+        $this->saveAutomatedStatusTransition();
     }
 
     /**
@@ -106,7 +123,23 @@ class ProductionOrder extends Model
             $this->completion_date = now();
         }
         $this->status = self::STATUS_COMPLETED;
-        $this->save();
+        $this->saveAutomatedStatusTransition();
+    }
+
+    public static function automaticallyManagedStatuses(): array
+    {
+        return [self::STATUS_IN_PROGRESS, self::STATUS_PAUSED, self::STATUS_COMPLETED];
+    }
+
+    private function saveAutomatedStatusTransition(): void
+    {
+        $this->automatedStatusTransition = true;
+
+        try {
+            $this->save();
+        } finally {
+            $this->automatedStatusTransition = false;
+        }
     }
 
     protected static function booted(): void
@@ -118,6 +151,16 @@ class ProductionOrder extends Model
                 if (Auth::check() && Auth::user()->company_id) {
                     $productionOrder->company_id = Auth::user()->company_id;
                 }
+            }
+        });
+
+        static::updating(function (ProductionOrder $productionOrder): void {
+            if ($productionOrder->isDirty('status')
+                && in_array($productionOrder->status, self::automaticallyManagedStatuses(), true)
+                && ! $productionOrder->automatedStatusTransition) {
+                throw ValidationException::withMessages([
+                    'status' => 'Este status é atualizado automaticamente pelo apontamento da produção.',
+                ]);
             }
         });
     }

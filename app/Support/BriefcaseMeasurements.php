@@ -62,6 +62,9 @@ class BriefcaseMeasurements
         $compensatedAuxiliaryHeight = CardboardMeasurements::normalize(
             (float) ($auxiliaryHeight ?? 0) + (float) $sheetCompensation,
         );
+        $widthFlap = CardboardMeasurements::normalize(
+            ((float) ($width ?? 0) / 2) + (float) $sheetCompensation,
+        );
 
         return array_merge($measurements, [
             'left_flap' => CardboardMeasurements::normalize($measurements['left_flap'] ?? null),
@@ -69,10 +72,10 @@ class BriefcaseMeasurements
             'sheet_length' => $compensatedLength,
             'right_width' => $compensatedWidth,
             'second_length' => $compensatedLength,
-            'top_flap' => CardboardMeasurements::normalize($measurements['top_flap'] ?? null),
+            'top_flap' => $widthFlap,
             'height' => $compensatedHeight,
             'width_auxiliary_height' => $compensatedAuxiliaryHeight,
-            'bottom_flap' => CardboardMeasurements::normalize($measurements['bottom_flap'] ?? null),
+            'bottom_flap' => $widthFlap,
         ]);
     }
 

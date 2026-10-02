@@ -126,9 +126,10 @@ class OperationalProfileTest extends TestCase
         $this->assertSame('105', $product->briefcase_measurements['sheet_length']);
         $this->assertSame('45', $product->briefcase_measurements['left_width']);
         $this->assertSame('105', $product->briefcase_measurements['second_length']);
-        $this->assertNull($product->briefcase_measurements['top_flap']);
+        $this->assertSame('25', $product->briefcase_measurements['top_flap']);
         $this->assertSame('25', $product->briefcase_measurements['height']);
         $this->assertSame('35', $product->briefcase_measurements['width_auxiliary_height']);
+        $this->assertSame('25', $product->briefcase_measurements['bottom_flap']);
     }
 
     public function test_clearing_briefcase_measurements_does_not_clear_box_measurements(): void
