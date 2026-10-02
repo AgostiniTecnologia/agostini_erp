@@ -50,20 +50,13 @@ class BriefcaseMeasurements
         $height = CardboardMeasurements::normalize($measurements['internal_height'] ?? null);
         $auxiliaryHeight = CardboardMeasurements::normalize($measurements['auxiliary_height'] ?? null);
         $sheetCompensation = CardboardMeasurements::normalize($compensation) ?? '5';
-        $compensatedLength = CardboardMeasurements::normalize(
-            (float) ($length ?? 0) + (float) $sheetCompensation,
-        );
-        $compensatedWidth = CardboardMeasurements::normalize(
-            (float) ($width ?? 0) + (float) $sheetCompensation,
-        );
-        $compensatedHeight = CardboardMeasurements::normalize(
-            (float) ($height ?? 0) + (float) $sheetCompensation,
-        );
-        $compensatedAuxiliaryHeight = CardboardMeasurements::normalize(
-            (float) ($auxiliaryHeight ?? 0) + (float) $sheetCompensation,
-        );
-        $widthFlap = CardboardMeasurements::normalize(
-            ((float) ($width ?? 0) / 2) + (float) $sheetCompensation,
+        $compensatedLength = self::withCompensation($length, $sheetCompensation);
+        $compensatedWidth = self::withCompensation($width, $sheetCompensation);
+        $compensatedHeight = self::withCompensation($height, $sheetCompensation);
+        $compensatedAuxiliaryHeight = self::withCompensation($auxiliaryHeight, $sheetCompensation);
+        $widthFlap = self::withCompensation(
+            CardboardMeasurements::normalize((float) ($width ?? 0) / 2),
+            $sheetCompensation,
         );
 
         return array_merge($measurements, [
@@ -101,6 +94,26 @@ class BriefcaseMeasurements
 
     public static function widthTotal(array $measurements): float
     {
-        return CardboardMeasurements::total($measurements, self::WIDTH_FIELDS);
+        $auxiliaryHeight = CardboardMeasurements::normalize($measurements['auxiliary_height'] ?? null);
+        $heightField = (float) ($auxiliaryHeight ?? 0) <= 0
+            ? 'height'
+            : 'width_auxiliary_height';
+
+        return CardboardMeasurements::total($measurements, [
+            'top_flap',
+            $heightField,
+            'bottom_flap',
+        ]);
+    }
+
+    private static function withCompensation(?string $measurement, string $compensation): string
+    {
+        if ((float) ($measurement ?? 0) <= 0) {
+            return '0';
+        }
+
+        return CardboardMeasurements::normalize(
+            (float) $measurement + (float) $compensation,
+        ) ?? '0';
     }
 }

@@ -107,4 +107,16 @@ class CardboardMeasurementsTest extends TestCase
         $this->assertSame(2061.0, CardboardMeasurements::lengthTotal($measurements));
         $this->assertSame(1009.0, CardboardMeasurements::widthTotal($measurements));
     }
+
+    public function test_att_uses_the_internal_width_for_both_flaps(): void
+    {
+        $measurements = CardboardMeasurements::fromInternalDimensions([
+            'internal_length' => '100',
+            'internal_width' => '40',
+            'internal_height' => '20',
+        ], 8, 70, true);
+
+        $this->assertSame('40', $measurements['top_flap']);
+        $this->assertSame('40', $measurements['bottom_flap']);
+    }
 }

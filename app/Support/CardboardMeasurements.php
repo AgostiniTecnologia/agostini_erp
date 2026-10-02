@@ -65,12 +65,14 @@ class CardboardMeasurements
         array $measurements,
         mixed $foldMargin = 5,
         mixed $lengthFlapDefault = 60,
+        bool $att = false,
     ): array {
         $length = (float) (self::normalize($measurements['internal_length'] ?? null) ?? 0);
         $width = (float) (self::normalize($measurements['internal_width'] ?? null) ?? 0);
         $height = (float) (self::normalize($measurements['internal_height'] ?? null) ?? 0);
         $margin = (float) (self::normalize($foldMargin) ?? 5);
         $lengthFlap = (float) (self::normalize($lengthFlapDefault) ?? 60);
+        $widthFlap = $att ? $width : ($width / 2) + $margin;
 
         return array_merge($measurements, [
             'left_flap' => self::normalizedNumber($lengthFlap),
@@ -78,11 +80,11 @@ class CardboardMeasurements
             'sheet_length' => self::normalizedNumber($length + $margin),
             'right_height' => self::normalizedNumber($height),
             'right_flap' => self::normalizedNumber($lengthFlap),
-            'top_flap' => self::normalizedNumber(($width / 2) + $margin),
+            'top_flap' => self::normalizedNumber($widthFlap),
             'top_height' => self::normalizedNumber($height + $margin),
             'sheet_width' => self::normalizedNumber($width + $margin),
             'bottom_height' => self::normalizedNumber($height + $margin),
-            'bottom_flap' => self::normalizedNumber(($width / 2) + $margin),
+            'bottom_flap' => self::normalizedNumber($widthFlap),
         ]);
     }
 
@@ -95,8 +97,9 @@ class CardboardMeasurements
         array $measurements,
         mixed $foldMargin = 5,
         mixed $lengthFlapDefault = 60,
+        bool $att = false,
     ): array {
-        $calculated = self::fromInternalDimensions($measurements, $foldMargin, $lengthFlapDefault);
+        $calculated = self::fromInternalDimensions($measurements, $foldMargin, $lengthFlapDefault, $att);
 
         foreach ([...self::LENGTH_FIELDS, ...self::WIDTH_FIELDS] as $field) {
             if (array_key_exists($field, $measurements)) {

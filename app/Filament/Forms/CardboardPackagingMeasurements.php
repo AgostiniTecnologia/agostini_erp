@@ -14,6 +14,7 @@ use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
 use Filament\Forms\Get;
 use Filament\Forms\Set;
 use Illuminate\Support\HtmlString;
@@ -37,8 +38,14 @@ class CardboardPackagingMeasurements
                             self::sheetType(),
                             self::foldMargin(),
                             self::calculationSetting('length_flap_default', 'Aba padrão', 'length_flap_default', 60),
+                            Toggle::make('att')
+                                ->label('ATT')
+                                ->helperText('Aba superior e aba inferior iguais à largura interna.')
+                                ->default(false)
+                                ->live()
+                                ->afterStateUpdated(fn (Get $get, Set $set) => self::recalculate($get, $set)),
                         ])
-                        ->columns(['default' => 1, 'md' => 3]),
+                        ->columns(['default' => 1, 'md' => 4]),
                     Section::make('Medidas internas')
                         ->schema([
                             self::measurement('internal_length', 'Comprimento interno', true),
@@ -142,7 +149,7 @@ class CardboardPackagingMeasurements
                             self::measurement('height', 'Altura', false, 'briefcase_measurements'),
                             self::measurement('width_auxiliary_height', 'Altura aux.', false, 'briefcase_measurements'),
                             self::measurement('bottom_flap', 'Aba 2', false, 'briefcase_measurements'),
-                            self::total('Largura total', BriefcaseMeasurements::WIDTH_FIELDS, 'briefcase_measurements'),
+                            self::briefcaseWidthTotal(),
                         ])
                         ->columns(['default' => 1, 'md' => 3, 'xl' => 6]),
                     Placeholder::make('briefcase_sheet_size')
@@ -343,6 +350,15 @@ class CardboardPackagingMeasurements
             });
     }
 
+    private static function briefcaseWidthTotal(): Placeholder
+    {
+        return Placeholder::make('largura_total')
+            ->label('Largura total')
+            ->content(fn (Get $get): string => CardboardMeasurements::format(
+                BriefcaseMeasurements::widthTotal(self::measurements($get, 'briefcase_measurements')),
+            ).' '.CompanyMeasurementSettings::lengthUnit());
+    }
+
     private static function measurements(Get $get, string $statePath = 'cardboard_measurements'): array
     {
         return (array) ($get($statePath) ?? []);
@@ -367,6 +383,7 @@ class CardboardPackagingMeasurements
                 self::measurements($get, $statePath),
                 $get('fold_margin') ?? self::companyFoldMargin($get('cardboard_sheet_type')),
                 $get('length_flap_default') ?? CompanyMeasurementSettings::company()?->length_flap_default ?? 60,
+                (bool) $get('att'),
             );
 
         foreach ($calculated as $field => $value) {

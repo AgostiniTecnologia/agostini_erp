@@ -128,7 +128,7 @@ class ProductTechnicalSheetPdfTest extends TestCase
 
         $this->assertStringContainsString('Medidas da maleta', $html);
         $this->assertStringContainsString('Altura auxiliar', $html);
-        $this->assertStringContainsString('Tamanho da chapa: 300 × 35 mm', $html);
+        $this->assertStringContainsString('Tamanho da chapa: 300 × 85 mm', $html);
         $this->assertStringNotContainsString('999 mm', $html);
     }
 

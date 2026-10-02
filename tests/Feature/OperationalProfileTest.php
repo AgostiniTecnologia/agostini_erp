@@ -178,6 +178,28 @@ class OperationalProfileTest extends TestCase
         $this->assertSame('48', $measurements['sheet_width']);
     }
 
+    public function test_att_uses_and_persists_the_internal_width_for_both_flaps(): void
+    {
+        $company = Company::factory()->create([
+            'operational_profile' => OperationalProfile::CardboardPackaging,
+            'fold_margin' => 8,
+        ]);
+        $this->actingAs(User::factory()->for($company)->create());
+
+        $product = Product::factory()->forCompany($company)->create([
+            'att' => true,
+            'cardboard_measurements' => [
+                'internal_length' => '100',
+                'internal_width' => '40',
+                'internal_height' => '20',
+            ],
+        ])->fresh();
+
+        $this->assertTrue($product->att);
+        $this->assertSame('40', $product->cardboard_measurements['top_flap']);
+        $this->assertSame('40', $product->cardboard_measurements['bottom_flap']);
+    }
+
     public function test_cardboard_cut_measurements_can_use_product_specific_configuration(): void
     {
         $company = Company::factory()->create([
