@@ -9,42 +9,64 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('production_order_items', function (Blueprint $table) {
-            $table->foreignUuid('sales_order_item_id')
-                ->nullable()
-                ->after('production_order_uuid')
-                ->constrained('sales_order_items', 'uuid')
-                ->nullOnDelete();
+        // This guard also lets the migration resume safely after a partial
+        // MySQL execution from the previous version of this migration.
+        if (! Schema::hasColumn('production_order_items', 'sales_order_item_id')) {
+            Schema::table('production_order_items', function (Blueprint $table) {
+                $table->foreignUuid('sales_order_item_id')
+                    ->nullable()
+                    ->after('production_order_uuid')
+                    ->constrained('sales_order_items', 'uuid')
+                    ->nullOnDelete();
 
-            $table->index('sales_order_item_id');
-        });
+                $table->index('sales_order_item_id');
+            });
+        }
 
-        Schema::table('transport_order_items', function (Blueprint $table) {
-            $table->dropUnique('transport_item_client_product_unique');
-            $table->index(
-                ['transport_order_id', 'client_id'],
-                'transport_item_order_client_index'
-            );
-        });
+        // MySQL may use the old unique index to support the transport_order_id
+        // foreign key. Create its replacement in a separate ALTER first.
+        if (! Schema::hasIndex('transport_order_items', 'transport_item_order_client_index')) {
+            Schema::table('transport_order_items', function (Blueprint $table) {
+                $table->index(
+                    ['transport_order_id', 'client_id'],
+                    'transport_item_order_client_index'
+                );
+            });
+        }
+
+        if (Schema::hasIndex('transport_order_items', 'transport_item_client_product_unique')) {
+            Schema::table('transport_order_items', function (Blueprint $table) {
+                $table->dropUnique('transport_item_client_product_unique');
+            });
+        }
 
         $this->backfillSalesOrderItems();
     }
 
     public function down(): void
     {
-        Schema::table('transport_order_items', function (Blueprint $table) {
-            $table->dropIndex('transport_item_order_client_index');
-            $table->unique(
-                ['transport_order_id', 'client_id', 'product_id'],
-                'transport_item_client_product_unique'
-            );
-        });
+        if (! Schema::hasIndex('transport_order_items', 'transport_item_client_product_unique')) {
+            Schema::table('transport_order_items', function (Blueprint $table) {
+                $table->unique(
+                    ['transport_order_id', 'client_id', 'product_id'],
+                    'transport_item_client_product_unique'
+                );
+            });
+        }
 
-        Schema::table('production_order_items', function (Blueprint $table) {
-            $table->dropForeign(['sales_order_item_id']);
-            $table->dropIndex(['sales_order_item_id']);
-            $table->dropColumn('sales_order_item_id');
-        });
+        if (Schema::hasIndex('transport_order_items', 'transport_item_order_client_index')) {
+            Schema::table('transport_order_items', function (Blueprint $table) {
+                $table->dropIndex('transport_item_order_client_index');
+            });
+        }
+
+        if (Schema::hasColumn('production_order_items', 'sales_order_item_id')) {
+            Schema::table('production_order_items', function (Blueprint $table) {
+                $table->dropForeign(['sales_order_item_id']);
+                $table->dropIndex(['sales_order_item_id']);
+                $table->dropColumn('sales_order_item_id');
+            });
+        }
     }
 
     /**
