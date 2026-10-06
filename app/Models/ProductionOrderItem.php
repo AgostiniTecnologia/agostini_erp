@@ -3,21 +3,15 @@
 namespace App\Models;
 
 use App\Models\Scopes\TenantScope;
-
 // <-- Importar Scope
-use Illuminate\Database\Eloquent\Relations\Pivot;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use Illuminate\Database\Eloquent\Relations\HasMany;
-
 // Para os logs
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Auth;
-
-use App\Models\ProductionOrderItemStep;
 
 // <-- Importar Auth
 
@@ -26,12 +20,15 @@ class ProductionOrderItem extends Model
     use HasFactory, HasUuids, SoftDeletes;
 
     protected $primaryKey = 'uuid';
+
     public $incrementing = false;
+
     protected $keyType = 'string';
 
     protected $fillable = [
         'company_id',
         'production_order_uuid',
+        'sales_order_item_id',
         'product_uuid',
         'quantity_planned',
         'quantity_produced',
@@ -62,6 +59,11 @@ class ProductionOrderItem extends Model
         return $this->belongsTo(ProductionOrder::class, 'production_order_uuid', 'uuid');
     }
 
+    public function salesOrderItem(): BelongsTo
+    {
+        return $this->belongsTo(SalesOrderItem::class, 'sales_order_item_id', 'uuid');
+    }
+
     /**
      * Get the product associated with this item.
      */
@@ -76,6 +78,7 @@ class ProductionOrderItem extends Model
             ->using(ProductionOrderItemStep::class)
             ->withTimestamps();
     }
+
     protected static function booted(): void
     {
         static::addGlobalScope(new TenantScope);
@@ -84,8 +87,7 @@ class ProductionOrderItem extends Model
             if (empty($model->company_id)) {
                 if ($model->productionOrder && $model->productionOrder->company_id) {
                     $model->company_id = $model->productionOrder->company_id;
-                }
-                elseif (Auth::check() && Auth::user()->company_id) {
+                } elseif (Auth::check() && Auth::user()->company_id) {
                     $model->company_id = Auth::user()->company_id;
                 }
             }
@@ -99,7 +101,7 @@ class ProductionOrderItem extends Model
                 'production_order_uuid' => $model->production_order_uuid,
                 'production_order_item_uuid' => $model->uuid,
                 'user_uuid' => auth()->user()->uuid,
-                'notes' => "Produto " . $produto->nome . " adicionado (" . $model->quantity_produced . "/" . $model->quantity_planned . ")",
+                'notes' => 'Produto '.$produto->nome.' adicionado ('.$model->quantity_produced.'/'.$model->quantity_planned.')',
             ]);
 
             // Tenta iniciar a produção da Ordem de Produção se ainda não tiver sido iniciada
@@ -122,7 +124,7 @@ class ProductionOrderItem extends Model
                 'production_order_uuid' => $model->production_order_uuid,
                 'production_order_item_uuid' => $model->uuid,
                 'user_uuid' => auth()->user()->uuid,
-                'notes' => "Produto " . $produto->nome . " removido (" . $model->quantity_produced . "/" . $model->quantity_planned . ")",
+                'notes' => 'Produto '.$produto->nome.' removido ('.$model->quantity_produced.'/'.$model->quantity_planned.')',
             ]);
         });
     }

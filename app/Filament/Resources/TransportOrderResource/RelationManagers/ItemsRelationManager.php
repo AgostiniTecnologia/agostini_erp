@@ -4,6 +4,7 @@ namespace App\Filament\Resources\TransportOrderResource\RelationManagers;
 
 use App\Models\Client;
 use App\Models\TransportOrder; // Importante para type hinting do ownerRecord
+use App\Services\ProductionToTransportService;
 use App\Services\RouteOptimizationService;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -20,16 +21,16 @@ class ItemsRelationManager extends RelationManager
     // Defina um recordTitleAttribute se aplicável, ex:
     // protected static ?string $recordTitleAttribute = 'product.name';
 
-    protected static ?string $title = "Itens para Transporte";
-    protected static ?string $label = "Encomenda";
-    protected static ?string $pluralLabel = "Encomendas";
+    protected static ?string $title = 'Itens para Transporte';
 
-    // Função auxiliar para verificar o status da ordem pai
-    protected function isParentOrderCompleted(): bool
+    protected static ?string $label = 'Encomenda';
+
+    protected static ?string $pluralLabel = 'Encomendas';
+
+    protected function isParentOrderLocked(): bool
     {
-        // Garante que ownerRecord é uma instância de TransportOrder antes de acessar a propriedade status
         return $this->ownerRecord instanceof TransportOrder &&
-            $this->ownerRecord->status === TransportOrder::STATUS_COMPLETED;
+            $this->ownerRecord->status !== TransportOrder::STATUS_PENDING;
     }
 
     public function form(Form $form): Form
@@ -48,6 +49,7 @@ class ItemsRelationManager extends RelationManager
                     ->afterStateUpdated(function (Set $set, ?string $state) {
                         if (blank($state)) {
                             $set('delivery_address_snapshot', null);
+
                             return;
                         }
 
@@ -58,31 +60,31 @@ class ItemsRelationManager extends RelationManager
                             $set('delivery_address_snapshot', $address);
                         }
                     })
-                    ->disabled($this->isParentOrderCompleted()),
+                    ->disabled($this->isParentOrderLocked()),
                 Forms\Components\Textarea::make('delivery_address_snapshot')
                     ->label('Endereço de Entrega')
                     ->rows(3)
                     ->disabled()
                     ->readOnly(true)
                     ->columnSpanFull()
-                    ->disabled($this->isParentOrderCompleted()),
+                    ->disabled($this->isParentOrderLocked()),
                 Forms\Components\TextInput::make('quantity')
                     ->label('Quantidade')
                     ->numeric()
                     ->required()
-                    ->disabled($this->isParentOrderCompleted()),
+                    ->disabled($this->isParentOrderLocked()),
                 Forms\Components\Select::make('product_id')
                     ->relationship('product', 'name')
                     ->label('Produto')
                     ->required()
                     ->searchable()
                     ->preload()
-                    ->disabled($this->isParentOrderCompleted()),
+                    ->disabled($this->isParentOrderLocked()),
                 Forms\Components\Textarea::make('notes')
                     ->label('Observações do Item')
                     ->rows(2)
                     ->columnSpanFull()
-                    ->disabled($this->isParentOrderCompleted()),
+                    ->disabled($this->isParentOrderLocked()),
             ]);
     }
 
@@ -92,6 +94,14 @@ class ItemsRelationManager extends RelationManager
             // ->recordTitleAttribute('product.name') // Exemplo
             ->columns([
                 Tables\Columns\TextColumn::make('delivery_sequence')->label('Seq.')->sortable(),
+                Tables\Columns\TextColumn::make('salesOrderItem.productionOrderItem.productionOrder.order_number')
+                    ->label('OP')
+                    ->placeholder('Manual')
+                    ->searchable(),
+                Tables\Columns\TextColumn::make('salesOrderItem.salesOrder.order_number')
+                    ->label('Pedido')
+                    ->placeholder('Manual')
+                    ->searchable(),
                 Tables\Columns\TextColumn::make('client.name')->label('Cliente')->searchable()->sortable(),
                 Tables\Columns\TextColumn::make('product.name')->label('Produto')->searchable()->sortable(),
                 Tables\Columns\TextColumn::make('quantity')->label('Qtd'),
@@ -113,7 +123,7 @@ class ItemsRelationManager extends RelationManager
                                 // Passa as fotos para uma view Blade que renderizará o conteúdo do modal
                                 return view('filament.tables.columns.delivery-photos-modal', ['photos' => $record->delivery_photos]);
                             })
-                            ->modalHeading(fn(Model $record) => 'Fotos: ' . $record->product->name . ' - Cliente: ' . $record->client->name) // Título dinâmico para o modal
+                            ->modalHeading(fn (Model $record) => 'Fotos: '.$record->product->name.' - Cliente: '.$record->client->name) // Título dinâmico para o modal
                             ->modalSubmitAction(false) // Remove o botão de "Submit"
                             ->modalCancelActionLabel('Fechar') // Rótulo do botão de fechar
                             ->modalWidth('4xl') // Define a largura do modal (ex: md, lg, xl, 2xl, ..., 7xl, screen)
@@ -123,25 +133,58 @@ class ItemsRelationManager extends RelationManager
                 //
             ])
             ->headerActions([
+                Tables\Actions\Action::make('addCompletedProductionOrders')
+                    ->label('Adicionar produções concluídas')
+                    ->icon('heroicon-o-arrow-right-circle')
+                    ->color('success')
+                    ->modalHeading('Selecionar produções concluídas')
+                    ->modalDescription('Cada produto selecionado será incluído nesta ordem de transporte com o cliente e endereço do pedido de venda.')
+                    ->modalSubmitActionLabel('Adicionar à carga')
+                    ->modalWidth('5xl')
+                    ->form([
+                        Forms\Components\Select::make('production_orders')
+                            ->label('Ordens de produção disponíveis')
+                            ->options(fn (): array => app(ProductionToTransportService::class)->availableOrderOptions())
+                            ->multiple()
+                            ->searchable()
+                            ->preload()
+                            ->required()
+                            ->helperText('São exibidas apenas OPs totalmente concluídas e ainda não vinculadas a uma carga ativa.'),
+                    ])
+                    ->action(function (array $data): void {
+                        $createdItems = app(ProductionToTransportService::class)->transferTo(
+                            $this->getOwnerRecord(),
+                            $data['production_orders'] ?? []
+                        );
+
+                        $this->recalculateSequence();
+
+                        Notification::make()
+                            ->title('Produções adicionadas à carga')
+                            ->body("{$createdItems} item(ns) incluído(s) na ordem de transporte.")
+                            ->success()
+                            ->send();
+                    })
+                    ->visible(! $this->isParentOrderLocked()),
                 Tables\Actions\Action::make('Recalcular Sequencial')
-                    ->visible(!$this->isParentOrderCompleted())
+                    ->visible(! $this->isParentOrderLocked())
                     ->action(fn () => $this->recalculateSequence()),
                 Tables\Actions\CreateAction::make()
-                    ->visible(!$this->isParentOrderCompleted())
+                    ->visible(! $this->isParentOrderLocked())
                     ->after(fn () => $this->recalculateSequence()),
             ])
             ->actions([
                 Tables\Actions\EditAction::make()
-                    ->visible(!$this->isParentOrderCompleted())
+                    ->visible(! $this->isParentOrderLocked())
                     ->after(fn () => $this->recalculateSequence()),
                 Tables\Actions\DeleteAction::make()
-                    ->visible(!$this->isParentOrderCompleted())
+                    ->visible(! $this->isParentOrderLocked())
                     ->after(fn () => $this->recalculateSequence()),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make()
-                        ->visible(!$this->isParentOrderCompleted())
+                        ->visible(! $this->isParentOrderLocked())
                         ->after(fn () => $this->recalculateSequence()),
                 ]),
             ]);
@@ -150,39 +193,43 @@ class ItemsRelationManager extends RelationManager
     // Sobrescreve os métodos can* para uma camada extra de segurança
     public function canCreate(): bool
     {
-        if ($this->isParentOrderCompleted()) {
+        if ($this->isParentOrderLocked()) {
             return false;
         }
+
         return parent::canCreate();
     }
 
     public function canEdit(Model $record): bool
     {
-        if ($this->isParentOrderCompleted()) {
+        if ($this->isParentOrderLocked()) {
             return false;
         }
+
         return parent::canEdit($record);
     }
 
     public function canDelete(Model $record): bool
     {
-        if ($this->isParentOrderCompleted()) {
+        if ($this->isParentOrderLocked()) {
             return false;
         }
+
         return parent::canDelete($record);
     }
 
     public function canDeleteAny(): bool
     {
-        if ($this->isParentOrderCompleted()) {
+        if ($this->isParentOrderLocked()) {
             return false;
         }
+
         return parent::canDeleteAny();
     }
 
     private function recalculateSequence(): void
     {
-        $optimizer = new RouteOptimizationService();
+        $optimizer = new RouteOptimizationService;
         $success = $optimizer->calculateSequence($this->getOwnerRecord());
 
         if ($success) {
@@ -199,4 +246,3 @@ class ItemsRelationManager extends RelationManager
         }
     }
 }
-

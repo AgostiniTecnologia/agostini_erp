@@ -2,42 +2,52 @@
 
 namespace App\Livewire;
 
-use App\Models\ProductionOrderLog; // Mantenha se ainda usar para outros logs
+// Mantenha se ainda usar para outros logs
+use App\Models\PauseReason;
 use App\Models\ProductionOrderItem;
 use App\Models\ProductionStep;
-use App\Models\UserCurrentTask;
-use App\Models\PauseReason;
 use App\Models\TaskPauseLog;
+use App\Models\UserCurrentTask;
 use Carbon\Carbon;
 use Carbon\CarbonInterval;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
-use Livewire\Component;
+use Filament\Notifications\Notification;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Auth;
-use Filament\Notifications\Notification;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Computed;
+use Livewire\Component;
 
 class UserTaskControl extends Component
 {
     public ?UserCurrentTask $currentTask = null;
+
     public ?string $productName = null;
+
     public ?string $stepName = null;
+
     public ?string $orderNumber = null;
+
     public float $quantityPlanned = 0;
+
     public float $quantityProduced = 0;
+
     public float $quantityRemaining = 0;
+
     public bool $isPaused = false;
 
     public ?string $selectedPauseReasonUuid = null;
+
     public array $availablePauseReasons = [];
 
     public ?float $pauseQuantityProduced = null;
+
     public string $pauseNotes = '';
+
     public ?float $finishQuantityProduced = null;
+
     public string $finishNotes = '';
 
     public string $debugScannedQrCode = '';
@@ -55,8 +65,9 @@ class UserTaskControl extends Component
     protected function loadAvailablePauseReasons(): void
     {
         $user = Auth::user();
-        if (!$user) {
+        if (! $user) {
             $this->availablePauseReasons = [];
+
             return;
         }
 
@@ -84,7 +95,7 @@ class UserTaskControl extends Component
             'productionOrderItem.product',
             'productionOrderItem.productionOrder',
             'workSlot',
-            'lastPauseReasonDetail'
+            'lastPauseReasonDetail',
         ])
             ->where('user_uuid', $userId)
             ->whereIn('status', ['active', 'paused'])
@@ -109,7 +120,7 @@ class UserTaskControl extends Component
                 'taskId' => $this->currentTask->uuid,
                 'status' => $this->currentTask->status,
                 'isPaused' => $this->isPaused,
-                'lastPauseReason' => $this->currentTask->lastPauseReasonDetail?->name
+                'lastPauseReason' => $this->currentTask->lastPauseReasonDetail?->name,
             ]);
         } else {
             Log::info('UserTaskControl: Nenhuma tarefa ativa ou pausada encontrada para o usuário.', ['userId' => $userId]);
@@ -125,7 +136,7 @@ class UserTaskControl extends Component
     #[Computed(persist: true, seconds: 1)]
     public function calculateTimeOnTask(): string
     {
-        if (!$this->currentTask?->uuid) {
+        if (! $this->currentTask?->uuid) {
             return '0s';
         }
         $totalSeconds = $this->currentTask->total_active_seconds ?? 0;
@@ -138,10 +149,11 @@ class UserTaskControl extends Component
                 Log::error('UserTaskControl: Erro ao parsear last_resumed_at para cálculo de tempo', [
                     'taskId' => $this->currentTask->uuid,
                     'last_resumed_at' => $this->currentTask->last_resumed_at,
-                    'error' => $e->getMessage()
+                    'error' => $e->getMessage(),
                 ]);
             }
         }
+
         return $totalSeconds > 0 ? CarbonInterval::seconds($totalSeconds)->cascade()->forHumans(['short' => true]) : '0s';
     }
 
@@ -171,9 +183,10 @@ class UserTaskControl extends Component
     public function handleQrCodeScan(array $eventData): void
     {
         $scannedData = $eventData['detail']['decodedText'] ?? null;
-        if (!$scannedData) {
+        if (! $scannedData) {
             Log::warning('UserTaskControl: Evento qr-code-scanned recebido sem dados válidos.');
             Notification::make()->danger()->title('Erro de Leitura')->body('Não foi possível obter os dados do QR Code.')->send();
+
             return;
         }
         $this->processScanResult($scannedData);
@@ -189,28 +202,30 @@ class UserTaskControl extends Component
     public function processScanResult(string $scannedData): void
     {
         Log::info('UserTaskControl: QR Code Data Recebido para Processamento:', ['data' => $scannedData]);
-        //DB::beginTransaction();
+        // DB::beginTransaction();
         try {
             $uuidPattern = '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}';
-            if (!preg_match("/^({$uuidPattern}):({$uuidPattern})$/", $scannedData, $matches)) {
+            if (! preg_match("/^({$uuidPattern}):({$uuidPattern})$/", $scannedData, $matches)) {
                 Log::warning('UserTaskControl: Formato do QR Code não corresponde ao padrão UUID:UUID.', ['data' => $scannedData]);
                 throw ValidationException::withMessages(['scan' => 'Formato do QR Code inválido. Esperado UUID:UUID.']);
             }
             $orderItemUuid = $matches[1];
             $stepUuid = $matches[2];
 
-            if (!Str::isUuid($orderItemUuid) || !Str::isUuid($stepUuid)) {
+            if (! Str::isUuid($orderItemUuid) || ! Str::isUuid($stepUuid)) {
                 throw ValidationException::withMessages(['scan' => 'Dados do QR Code contêm UUIDs inválidos.']);
             }
 
             $orderItem = ProductionOrderItem::where('uuid', $orderItemUuid)->first();
             $step = ProductionStep::where('uuid', $stepUuid)->first();
 
-            if (!$orderItem || !$step || !$orderItem->productionSteps->contains(function (ProductionStep $st) use ($step) { return $st->uuid == $step->uuid; })) {
+            if (! $orderItem || ! $step || ! $orderItem->productionSteps->contains(function (ProductionStep $st) use ($step) {
+                return $st->uuid == $step->uuid;
+            })) {
                 Log::error('UserTaskControl: Combinação Item/Etapa não encontrada ou inválida.', [
                     'orderItemUuid' => $orderItemUuid, 'stepUuid' => $stepUuid,
-                    'orderItemFound' => !is_null($orderItem), 'stepFound' => !is_null($step),
-                    'match' => $orderItem?->production_step_uuid === $step?->uuid
+                    'orderItemFound' => ! is_null($orderItem), 'stepFound' => ! is_null($step),
+                    'match' => $orderItem?->production_step_uuid === $step?->uuid,
                 ]);
                 throw ValidationException::withMessages(['scan' => 'Item da Ordem ou Etapa não encontrada, ou não correspondem.']);
             }
@@ -220,17 +235,19 @@ class UserTaskControl extends Component
                 ->whereIn('status', ['active', 'paused'])
                 ->first();
             if ($existingTask) {
-                if($existingTask->status === 'paused' && $userId === $existingTask->user_uuid) {
+                if ($existingTask->status === 'paused' && $userId === $existingTask->user_uuid) {
                     $this->resumeTask();
                     $this->dispatch('scan-success');
                     $this->dispatch('close-pause-modal');
+
                     return;
                 }
 
-                if($existingTask->status === 'active' && $userId === $existingTask->user_uuid) {
+                if ($existingTask->status === 'active' && $userId === $existingTask->user_uuid) {
                     $this->resumeTask();
                     $this->dispatch('scan-success');
                     $this->dispatch('close-pause-modal');
+
                     return;
                 }
 
@@ -251,19 +268,19 @@ class UserTaskControl extends Component
             // 2. ATUALIZAÇÃO CRÍTICA: Inicia a Ordem de Produção (OP) se ainda não estiver iniciada
             $orderItem->productionOrder->startProduction();
 
-            //DB::commit();
+            // DB::commit();
             Log::info('UserTaskControl: Nova tarefa iniciada com sucesso.', ['taskId' => $newTask->uuid]);
             $this->loadCurrentTask();
-            Notification::make()->success()->title('Tarefa Iniciada!')->body('Você iniciou a tarefa ' . $this->orderNumber . ' - ' . $this->stepName)->send();
+            Notification::make()->success()->title('Tarefa Iniciada!')->body('Você iniciou a tarefa '.$this->orderNumber.' - '.$this->stepName)->send();
             $this->dispatch('scan-success');
             $this->dispatch('close-pause-modal');
         } catch (ValidationException $e) {
-            //DB::rollBack();
+            // DB::rollBack();
             Log::error('UserTaskControl: Erro de validação ao processar QR Code:', ['error' => $e->getMessage(), 'errors_detail' => $e->errors()]);
             Notification::make()->danger()->title('Erro no QR Code')->body($e->getMessage())->send();
             $this->dispatch('scan-error', message: $e->getMessage());
         } catch (\Exception $e) {
-            //DB::rollBack();
+            // DB::rollBack();
             Log::error('UserTaskControl: Erro inesperado ao processar QR Code:', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
             Notification::make()->danger()->title('Erro Inesperado')->body('Ocorreu um erro ao iniciar a tarefa. Tente novamente.')->send();
             $this->dispatch('scan-error', message: 'Erro inesperado no servidor.');
@@ -274,17 +291,18 @@ class UserTaskControl extends Component
     {
         Log::info('UserTaskControl: pauseTask() chamado.');
 
-        if (!$this->currentTask || $this->currentTask->status !== 'active') {
+        if (! $this->currentTask || $this->currentTask->status !== 'active') {
             Log::warning('UserTaskControl: pauseTask() - Ação Inválida.', [
-                'hasCurrentTask' => !is_null($this->currentTask),
-                'currentTaskStatus' => $this->currentTask?->status
+                'hasCurrentTask' => ! is_null($this->currentTask),
+                'currentTaskStatus' => $this->currentTask?->status,
             ]);
             Notification::make()->warning()->title('Ação Inválida')->body('Não há tarefa ativa para pausar.')->send();
+
             return;
         }
 
         Log::info('UserTaskControl: pauseTask() - Motivo selecionado (antes da validação):', [
-            'selectedPauseReasonUuid' => $this->selectedPauseReasonUuid
+            'selectedPauseReasonUuid' => $this->selectedPauseReasonUuid,
         ]);
 
         try {
@@ -297,22 +315,24 @@ class UserTaskControl extends Component
             Log::info('UserTaskControl: pauseTask() - Validação do motivo da pausa OK.');
         } catch (ValidationException $e) {
             Log::error('UserTaskControl: pauseTask() - Falha na validação do motivo da pausa.', [
-                'errors' => $e->errors()
+                'errors' => $e->errors(),
             ]);
+
             return;
         }
 
         $quantityProducedSession = $this->pauseQuantityProduced ?? 0;
         Log::info('UserTaskControl: pauseTask() - Quantidade produzida na sessão:', [
             'pauseQuantityProduced' => $this->pauseQuantityProduced,
-            'quantityProducedSession' => $quantityProducedSession
+            'quantityProducedSession' => $quantityProducedSession,
         ]);
 
-        if (!is_numeric($quantityProducedSession) || $quantityProducedSession < 0) {
+        if (! is_numeric($quantityProducedSession) || $quantityProducedSession < 0) {
             Log::error('UserTaskControl: pauseTask() - Quantidade produzida na sessão inválida.', [
-                'quantityProducedSession' => $quantityProducedSession
+                'quantityProducedSession' => $quantityProducedSession,
             ]);
             Notification::make()->danger()->title('Erro na Pausa')->body('Quantidade produzida na sessão inválida.')->send();
+
             return;
         }
 
@@ -328,15 +348,15 @@ class UserTaskControl extends Component
                     Log::info('UserTaskControl: pauseTask() - Duração da sessão ativa calculada:', [
                         'last_resumed_at' => $this->currentTask->last_resumed_at->toDateTimeString(),
                         'now' => $now->toDateTimeString(),
-                        'durationSeconds' => $durationSeconds
+                        'durationSeconds' => $durationSeconds,
                     ]);
                 } catch (\Exception $e) {
                     Log::error('UserTaskControl: pauseTask() - Erro ao calcular duração da sessão.', [
                         'taskId' => $this->currentTask->uuid,
                         'last_resumed_at_raw' => $this->currentTask->last_resumed_at,
-                        'error' => $e->getMessage()
+                        'error' => $e->getMessage(),
                     ]);
-                    throw new \RuntimeException("Falha ao calcular duração da sessão: " . $e->getMessage(), 0, $e);
+                    throw new \RuntimeException('Falha ao calcular duração da sessão: '.$e->getMessage(), 0, $e);
                 }
             } else {
                 Log::info('UserTaskControl: pauseTask() - Não há last_resumed_at, duração da sessão ativa é 0 (primeira pausa).');
@@ -346,7 +366,7 @@ class UserTaskControl extends Component
             $newTotalActiveSeconds = max(0, (int) ($existingTotalSeconds + $durationSeconds));
             Log::info('UserTaskControl: pauseTask() - Cálculo de segundos ativos:', [
                 'existingTotalSeconds' => $existingTotalSeconds,
-                'newTotalActiveSeconds' => $newTotalActiveSeconds
+                'newTotalActiveSeconds' => $newTotalActiveSeconds,
             ]);
 
             $updateDataUserCurrentTask = [
@@ -354,7 +374,7 @@ class UserTaskControl extends Component
                 'last_pause_at' => $now,
                 'last_pause_reason_uuid' => $this->selectedPauseReasonUuid,
                 'total_active_seconds' => $newTotalActiveSeconds,
-                'last_resumed_at' => null
+                'last_resumed_at' => null,
             ];
             Log::info('UserTaskControl: pauseTask() - Dados para atualizar UserCurrentTask:', $updateDataUserCurrentTask);
             $this->currentTask->update($updateDataUserCurrentTask);
@@ -382,7 +402,7 @@ class UserTaskControl extends Component
                 'orderItemId' => $this->currentTask->production_order_item_uuid,
                 'currentItemTotalQuantity' => $currentItemTotalQuantity,
                 'quantityProducedSession' => $quantityProducedSession,
-                'newTotalQuantityForItem' => $newTotalQuantityForItem
+                'newTotalQuantityForItem' => $newTotalQuantityForItem,
             ]);
             $this->currentTask->productionOrderItem()->update(['quantity_produced' => $newTotalQuantityForItem]);
             Log::info('UserTaskControl: pauseTask() - ProductionOrderItem atualizado.');
@@ -390,40 +410,41 @@ class UserTaskControl extends Component
             DB::commit();
             Log::info('UserTaskControl: pauseTask() - Transação commitada. Tarefa pausada com sucesso.', [
                 'taskId' => $this->currentTask->uuid,
-                'reason_uuid' => $this->selectedPauseReasonUuid
+                'reason_uuid' => $this->selectedPauseReasonUuid,
             ]);
 
             $this->loadCurrentTask();
             $this->resetModalFields();
             $this->dispatch('refresh');
             $pauseReasonName = PauseReason::find($this->selectedPauseReasonUuid)?->name ?? 'Motivo desconhecido';
-            Notification::make()->info()->title('Tarefa Pausada')->body('Motivo: ' . $pauseReasonName)->send();
+            Notification::make()->info()->title('Tarefa Pausada')->body('Motivo: '.$pauseReasonName)->send();
             $this->dispatch('close-pause-modal');
 
         } catch (ValidationException $e) {
             DB::rollBack();
             Log::error('UserTaskControl: pauseTask() - ValidationException durante a transação.', [
-                'errors' => $e->errors()
+                'errors' => $e->errors(),
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('UserTaskControl: pauseTask() - Exceção geral durante a transação.', [
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
-            Notification::make()->danger()->title('Erro ao Pausar')->body('Não foi possível pausar a tarefa. Detalhes: ' . $e->getMessage())->send();
+            Notification::make()->danger()->title('Erro ao Pausar')->body('Não foi possível pausar a tarefa. Detalhes: '.$e->getMessage())->send();
         }
     }
 
     public function resumeTask(): void
     {
         Log::info('UserTaskControl: resumeTask() chamado.');
-        if (!$this->currentTask || $this->currentTask->status !== 'paused') {
+        if (! $this->currentTask || $this->currentTask->status !== 'paused') {
             Log::warning('UserTaskControl: resumeTask() - Ação Inválida.', [
-                'hasCurrentTask' => !is_null($this->currentTask),
-                'currentTaskStatus' => $this->currentTask?->status
+                'hasCurrentTask' => ! is_null($this->currentTask),
+                'currentTaskStatus' => $this->currentTask?->status,
             ]);
             Notification::make()->warning()->title('Ação Inválida')->body('Não há tarefa pausada para retomar.')->send();
+
             return;
         }
         DB::beginTransaction();
@@ -464,34 +485,36 @@ class UserTaskControl extends Component
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('UserTaskControl: resumeTask() - Erro ao retomar tarefa:', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
-            Notification::make()->danger()->title('Erro ao Retomar')->body('Não foi possível retomar a tarefa. Detalhes: ' . $e->getMessage())->send();
+            Notification::make()->danger()->title('Erro ao Retomar')->body('Não foi possível retomar a tarefa. Detalhes: '.$e->getMessage())->send();
         }
     }
 
     public function finishTask(): void
     {
         Log::info('UserTaskControl: finishTask() chamado.');
-        if (!$this->currentTask || !in_array($this->currentTask->status, ['active', 'paused'])) {
+        if (! $this->currentTask || ! in_array($this->currentTask->status, ['active', 'paused'])) {
             Log::warning('UserTaskControl: finishTask() - Ação Inválida.', [
-                'hasCurrentTask' => !is_null($this->currentTask),
-                'currentTaskStatus' => $this->currentTask?->status
+                'hasCurrentTask' => ! is_null($this->currentTask),
+                'currentTaskStatus' => $this->currentTask?->status,
             ]);
             Notification::make()->warning()->title('Ação Inválida')->body('Não há tarefa ativa ou pausada para finalizar.')->send();
+
             return;
         }
 
         $quantityProducedSession = $this->finishQuantityProduced ?? 0;
         Log::info('UserTaskControl: finishTask() - Quantidade produzida na sessão final:', [
             'finishQuantityProduced' => $this->finishQuantityProduced,
-            'quantityProducedSession' => $quantityProducedSession
+            'quantityProducedSession' => $quantityProducedSession,
         ]);
 
-        if (!is_numeric($quantityProducedSession) || $quantityProducedSession < 0) {
+        if (! is_numeric($quantityProducedSession) || $quantityProducedSession < 0) {
             Log::error('UserTaskControl: finishTask() - Quantidade produzida na sessão final inválida.', [
-                'quantityProducedSession' => $quantityProducedSession
+                'quantityProducedSession' => $quantityProducedSession,
             ]);
             Notification::make()->danger()->title('Erro na Finalização')->body('Quantidade produzida na sessão inválida.')->send();
             $this->dispatch('close-pause-modal');
+
             return;
         }
 
@@ -513,15 +536,15 @@ class UserTaskControl extends Component
                         'last_resumed_at' => $taskToFinish->last_resumed_at->toDateTimeString(),
                         'now' => $now->toDateTimeString(),
                         'durationSeconds' => $durationSeconds,
-                        'newTotalActiveSeconds' => $newTotalActiveSeconds
+                        'newTotalActiveSeconds' => $newTotalActiveSeconds,
                     ]);
                 } catch (\Exception $e) {
                     Log::error('UserTaskControl: finishTask() - Erro ao calcular duração da sessão final.', [
                         'taskId' => $taskToFinish->uuid,
                         'last_resumed_at_raw' => $taskToFinish->last_resumed_at,
-                        'error' => $e->getMessage()
+                        'error' => $e->getMessage(),
                     ]);
-                    throw new \RuntimeException("Falha ao calcular duração da sessão final: " . $e->getMessage(), 0, $e);
+                    throw new \RuntimeException('Falha ao calcular duração da sessão final: '.$e->getMessage(), 0, $e);
                 }
             }
             $newTotalActiveSeconds = max(0, (int) $newTotalActiveSeconds);
@@ -538,7 +561,7 @@ class UserTaskControl extends Component
                     Log::info('UserTaskControl: finishTask() - Encontrado TaskPauseLog para fechar.', ['logId' => $lastPauseLog->uuid]);
                     $lastPauseLog->update([
                         'resumed_at' => $now,
-                        'notes' => ($lastPauseLog->notes ? $lastPauseLog->notes . "\n" : '') . 'Pausa finalizada automaticamente ao concluir a tarefa.',
+                        'notes' => ($lastPauseLog->notes ? $lastPauseLog->notes."\n" : '').'Pausa finalizada automaticamente ao concluir a tarefa.',
                         'quantity_produced_during_pause' => $quantityProducedSession > 0 ? $quantityProducedSession : $lastPauseLog->quantity_produced_during_pause,
                     ]);
                     Log::info('UserTaskControl: finishTask() - TaskPauseLog fechado.');
@@ -550,16 +573,6 @@ class UserTaskControl extends Component
             // Atualizar ProductionOrderItem
             $currentItemTotalQuantity = $taskToFinish->productionOrderItem->quantity_produced ?? 0;
             $finalTotalQuantityForItem = $currentItemTotalQuantity;
-
-            // CRÍTICO: Verifica se a OP deve ser concluída
-            $productionOrder = $taskToFinish->productionOrderItem->productionOrder;
-            $totalPlanned = $productionOrder->items()->sum('quantity_planned');
-            $totalProduced = $productionOrder->items()->sum('quantity_produced') + $quantityProducedSession; // Inclui a produção desta sessão
-
-            if ($totalProduced >= $totalPlanned) {
-                $productionOrder->completeProduction();
-                Log::info('UserTaskControl: finishTask() - Ordem de Produção concluída.', ['orderNumber' => $productionOrder->order_number]);
-            }
 
             // Adiciona a quantidade da sessão apenas se a tarefa estava ativa antes de finalizar.
             // Se estava pausada, a $quantityProducedSession já foi (ou deveria ter sido)
@@ -582,13 +595,24 @@ class UserTaskControl extends Component
                 'currentItemTotalQuantity' => $currentItemTotalQuantity,
                 'quantityProducedSessionFromFinishModal' => $quantityProducedSession,
                 'originalStatus' => $originalStatus,
-                'finalTotalQuantityForItem' => $finalTotalQuantityForItem
+                'finalTotalQuantityForItem' => $finalTotalQuantityForItem,
             ]);
 
             $taskToFinish->productionOrderItem()->update([
-                'quantity_produced' => $finalTotalQuantityForItem
+                'quantity_produced' => $finalTotalQuantityForItem,
             ]);
             Log::info('UserTaskControl: finishTask() - ProductionOrderItem atualizado (final).');
+
+            // Verifica a conclusão somente depois de persistir a última quantidade.
+            // Assim, uma OP nunca fica disponível para transporte com quantidade incompleta.
+            $productionOrder = $taskToFinish->productionOrderItem->productionOrder;
+            $totalPlanned = $productionOrder->items()->sum('quantity_planned');
+            $totalProduced = $productionOrder->items()->sum('quantity_produced');
+
+            if ($totalPlanned > 0 && $totalProduced >= $totalPlanned) {
+                $productionOrder->completeProduction();
+                Log::info('UserTaskControl: finishTask() - Ordem de Produção concluída.', ['orderNumber' => $productionOrder->order_number]);
+            }
 
             // Deletar o UserCurrentTask
             $taskIdToDelete = $taskToFinish->uuid;
@@ -607,7 +631,7 @@ class UserTaskControl extends Component
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('UserTaskControl: finishTask() - Erro ao finalizar tarefa:', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
-            Notification::make()->danger()->title('Erro ao Finalizar')->body('Não foi possível finalizar a tarefa. Detalhes: ' . $e->getMessage())->send();
+            Notification::make()->danger()->title('Erro ao Finalizar')->body('Não foi possível finalizar a tarefa. Detalhes: '.$e->getMessage())->send();
         }
     }
 

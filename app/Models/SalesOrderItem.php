@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB; // Para DB::raw
 
@@ -15,7 +17,9 @@ class SalesOrderItem extends Model
     use HasFactory, HasUuids;
 
     protected $primaryKey = 'uuid';
+
     public $incrementing = false;
+
     protected $keyType = 'string';
 
     protected $fillable = [
@@ -40,7 +44,7 @@ class SalesOrderItem extends Model
 
     protected static function booted(): void
     {
-        static::addGlobalScope(new TenantScope());
+        static::addGlobalScope(new TenantScope);
 
         static::creating(function (Model $model) {
             if (empty($model->company_id)) {
@@ -85,6 +89,16 @@ class SalesOrderItem extends Model
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class, 'product_id', 'uuid');
+    }
+
+    public function productionOrderItem(): HasOne
+    {
+        return $this->hasOne(ProductionOrderItem::class, 'sales_order_item_id', 'uuid');
+    }
+
+    public function transportOrderItems(): HasMany
+    {
+        return $this->hasMany(TransportOrderItem::class, 'sales_order_item_id', 'uuid');
     }
 
     /**

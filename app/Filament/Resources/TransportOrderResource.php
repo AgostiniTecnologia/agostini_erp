@@ -42,7 +42,7 @@ class TransportOrderResource extends Resource
         return $form
             ->schema([
                 Forms\Components\Group::make()
-                    ->disabled(fn (?Model $record): bool => $record instanceof TransportOrder && $record->status === TransportOrder::STATUS_COMPLETED)
+                    ->disabled(fn (?Model $record): bool => $record instanceof TransportOrder && $record->status !== TransportOrder::STATUS_PENDING)
                     ->schema([
                         Forms\Components\TextInput::make('transport_order_number')
                             ->label('Número da OT')
@@ -77,7 +77,7 @@ class TransportOrderResource extends Resource
                         ]),
                     ]),
                 Forms\Components\Group::make()
-                    ->disabled(fn (?Model $record): bool => $record instanceof TransportOrder && $record->status === TransportOrder::STATUS_COMPLETED)
+                    ->disabled(fn (?Model $record): bool => $record instanceof TransportOrder && $record->status !== TransportOrder::STATUS_PENDING)
                     ->schema([
                         Forms\Components\Grid::make(2)->schema([
                             Forms\Components\DateTimePicker::make('planned_departure_datetime')
@@ -99,7 +99,7 @@ class TransportOrderResource extends Resource
                         ]),
                     ]),
                 Forms\Components\Group::make()
-                    ->disabled(fn (?Model $record): bool => $record instanceof TransportOrder && $record->status === TransportOrder::STATUS_COMPLETED)
+                    ->disabled(fn (?Model $record): bool => $record instanceof TransportOrder && $record->status !== TransportOrder::STATUS_PENDING)
                     ->columnSpanFull()
                     ->schema([
                         Forms\Components\Textarea::make('notes')
@@ -212,6 +212,39 @@ class TransportOrderResource extends Resource
 
                         return $record->status === TransportOrder::STATUS_PENDING && $record->items->isNotEmpty();
                     }),
+                Action::make('cancelShipment')
+                    ->label('Cancelar')
+                    ->icon('heroicon-o-x-circle')
+                    ->color('danger')
+                    ->modalHeading('Cancelar ordem de transporte')
+                    ->modalDescription('As produções desta carga voltarão a ficar disponíveis para outra ordem de transporte.')
+                    ->modalSubmitActionLabel('Confirmar cancelamento')
+                    ->form([
+                        Forms\Components\Textarea::make('cancellation_reason')
+                            ->label('Motivo do cancelamento')
+                            ->required()
+                            ->minLength(5)
+                            ->rows(3),
+                    ])
+                    ->action(function (TransportOrder $record, array $data): void {
+                        $record->update([
+                            'status' => TransportOrder::STATUS_CANCELLED,
+                            'cancellation_reason' => $data['cancellation_reason'],
+                            'cancelled_at' => now(),
+                            'cancelled_by_user_id' => auth()->id(),
+                        ]);
+
+                        Notification::make()
+                            ->title('Ordem de transporte cancelada')
+                            ->body('As produções vinculadas já podem ser selecionadas em outra carga.')
+                            ->success()
+                            ->send();
+                    })
+                    ->visible(fn (TransportOrder $record): bool => in_array(
+                        $record->status,
+                        [TransportOrder::STATUS_PENDING, TransportOrder::STATUS_APPROVED],
+                        true
+                    )),
                 Action::make('downloadShipmentPdf')
                     ->label('Visualizar Documento')
                     ->icon('heroicon-o-eye')
@@ -226,8 +259,6 @@ class TransportOrderResource extends Resource
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
-                    Tables\Actions\ForceDeleteBulkAction::make(),
                     Tables\Actions\RestoreBulkAction::make(),
                 ]),
             ])

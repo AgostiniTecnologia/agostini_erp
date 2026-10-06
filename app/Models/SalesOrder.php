@@ -3,7 +3,7 @@
 namespace App\Models;
 
 use App\Models\Scopes\TenantScope;
-
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -11,17 +11,17 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Auth;
-use App\Models\SalesGoal;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
-use Carbon\Carbon;
 
 class SalesOrder extends Model
 {
     use HasFactory, HasUuids, SoftDeletes;
 
     protected $primaryKey = 'uuid';
+
     public $incrementing = false;
+
     protected $keyType = 'string';
 
     protected $fillable = [
@@ -46,15 +46,21 @@ class SalesOrder extends Model
         'order_date' => 'date',
         'delivery_deadline' => 'date',
         'total_amount' => 'decimal:2',
-        'cancelled_at' => 'datetime'
+        'cancelled_at' => 'datetime',
     ];
 
     public const STATUS_DRAFT = 'draft';
+
     public const STATUS_PENDING = 'pending';
+
     public const STATUS_APPROVED = 'approved';
+
     public const STATUS_PROCESSING = 'processing';
+
     public const STATUS_SHIPPED = 'shipped';
+
     public const STATUS_DELIVERED = 'delivered';
+
     public const STATUS_CANCELLED = 'cancelled'; // NOVO
 
     public static function getStatusOptions(): array
@@ -72,7 +78,7 @@ class SalesOrder extends Model
 
     protected static function booted(): void
     {
-        static::addGlobalScope(new TenantScope());
+        static::addGlobalScope(new TenantScope);
 
         static::creating(function (Model $model) {
             if (empty($model->company_id) && Auth::check() && Auth::user()->company_id) {
@@ -88,7 +94,7 @@ class SalesOrder extends Model
                 $year = Carbon::now()->format('Y');
                 $prefix = "PV-{$year}-";
                 $companyLastOrder = SalesOrder::where('company_id', $model->company_id)
-                    ->where('order_number', 'like', $prefix . '%')
+                    ->where('order_number', 'like', $prefix.'%')
                     ->withTrashed() // Considera também os excluídos para a sequência
                     ->orderBy('order_number', 'desc')
                     ->lockForUpdate()
@@ -96,10 +102,10 @@ class SalesOrder extends Model
 
                 $nextSequence = 1;
                 if ($companyLastOrder) {
-                    $lastSequence = (int)substr($companyLastOrder->order_number, strlen($prefix));
+                    $lastSequence = (int) substr($companyLastOrder->order_number, strlen($prefix));
                     $nextSequence = $lastSequence + 1;
                 }
-                $model->order_number = $prefix . str_pad((string)$nextSequence, 4, '0', STR_PAD_LEFT);
+                $model->order_number = $prefix.str_pad((string) $nextSequence, 4, '0', STR_PAD_LEFT);
             }
         });
 
@@ -120,13 +126,13 @@ class SalesOrder extends Model
             }
 
             if ($newStatus === self::STATUS_PENDING) {
-                if (!in_array($originalStatus, [self::STATUS_DRAFT, self::STATUS_PENDING])) {
+                if (! in_array($originalStatus, [self::STATUS_DRAFT, self::STATUS_PENDING])) {
                     throw ValidationException::withMessages(['status' => 'O pedido não pode voltar ao status Pendente a partir do status atual.']);
                 }
             }
 
             if ($newStatus === self::STATUS_APPROVED) {
-                if (!in_array($originalStatus, [self::STATUS_PENDING])) {
+                if (! in_array($originalStatus, [self::STATUS_PENDING])) {
                     throw ValidationException::withMessages(['status' => 'O pedido só pode ser Aprovado a partir do status Pendente.']);
                 }
                 // Criação da Ordem de Produção
@@ -137,21 +143,21 @@ class SalesOrder extends Model
 
             // Regra 4: Se 'Processando', não pode voltar a ser 'Aprovada'.
             if ($newStatus === self::STATUS_PROCESSING) {
-                if (!in_array($originalStatus, [self::STATUS_APPROVED])) {
+                if (! in_array($originalStatus, [self::STATUS_APPROVED])) {
                     throw ValidationException::withMessages(['status' => 'O pedido só pode ir para Processando a partir do status Aprovado.']);
                 }
             }
 
             // Regra 5: Se 'Enviando', não pode voltar a ser 'Processando'.
             if ($newStatus === self::STATUS_SHIPPED) {
-                if (!in_array($originalStatus, [self::STATUS_PROCESSING])) {
+                if (! in_array($originalStatus, [self::STATUS_PROCESSING])) {
                     throw ValidationException::withMessages(['status' => 'O pedido só pode ir para Enviando a partir do status Processando.']);
                 }
             }
 
             // Regra 6: Se 'Entregue', não pode voltar a ser 'Enviando'.
             if ($newStatus === self::STATUS_DELIVERED) {
-                if (!in_array($originalStatus, [self::STATUS_SHIPPED])) {
+                if (! in_array($originalStatus, [self::STATUS_SHIPPED])) {
                     throw ValidationException::withMessages(['status' => 'O pedido só pode ser marcado como Entregue a partir do status Enviando.']);
                 }
             }
@@ -172,15 +178,15 @@ class SalesOrder extends Model
                 'company_id' => $salesOrder->company_id,
                 'status' => 'Pendente', // Status inicial da Ordem de Produção
                 'due_date' => $salesOrder->delivery_deadline,
-                'notes' => "Ordem de Produção gerada automaticamente a partir do Pedido de Venda: " . $salesOrder->order_number,
+                'notes' => 'Ordem de Produção gerada automaticamente a partir do Pedido de Venda: '.$salesOrder->order_number,
                 'user_uuid' => Auth::id(), // Usuário que aprovou o pedido de venda
             ];
 
             // Gerar número da Ordem de Produção (lógica similar à CreateProductionOrder)
             $today = Carbon::now()->format('Ymd');
-            $prefix = 'OP-' . $today . '-';
+            $prefix = 'OP-'.$today.'-';
             $lastInternalOrder = ProductionOrder::where('company_id', $salesOrder->company_id) // Filtrar por empresa
-            ->where('order_number', 'like', $prefix . '%')
+                ->where('order_number', 'like', $prefix.'%')
                 ->withTrashed()
                 ->orderBy('order_number', 'desc')
                 ->lockForUpdate()
@@ -188,10 +194,10 @@ class SalesOrder extends Model
 
             $nextSequence = 1;
             if ($lastInternalOrder) {
-                $lastSequence = (int)substr($lastInternalOrder->order_number, strlen($prefix));
+                $lastSequence = (int) substr($lastInternalOrder->order_number, strlen($prefix));
                 $nextSequence = $lastSequence + 1;
             }
-            $productionOrderData['order_number'] = $prefix . str_pad((string)$nextSequence, 4, '0', STR_PAD_LEFT);
+            $productionOrderData['order_number'] = $prefix.str_pad((string) $nextSequence, 4, '0', STR_PAD_LEFT);
 
             $productionOrder = ProductionOrder::create($productionOrderData);
 
@@ -199,17 +205,18 @@ class SalesOrder extends Model
                 $productionOrderItem = ProductionOrderItem::create([
                     'company_id' => $salesOrder->company_id,
                     'production_order_uuid' => $productionOrder->uuid,
+                    'sales_order_item_id' => $salesItem->uuid,
                     'product_uuid' => $salesItem->product_id,
                     'quantity_planned' => $salesItem->quantity,
-                    'notes' => 'Item originado do Pedido de Venda ' . $salesOrder->order_number,
+                    'notes' => 'Item originado do Pedido de Venda '.$salesOrder->order_number,
                 ]);
 
                 $product = $productionOrderItem->product;
 
-                if($product){
+                if ($product) {
                     $stepUuids = $product->productionSteps()->pluck('production_steps.uuid')->all();
-                    if (!empty($stepUuids)) {
-                        //$productionOrderItem->productionSteps()->sync($stepUuids);
+                    if (! empty($stepUuids)) {
+                        // $productionOrderItem->productionSteps()->sync($stepUuids);
                     }
                 }
             }
@@ -265,8 +272,6 @@ class SalesOrder extends Model
         $this->commission_amount = $commissionAmount;
         $this->saveQuietly(); // Salva sem disparar eventos para evitar loops
     }
-
-
 
     public function items(): HasMany
     {

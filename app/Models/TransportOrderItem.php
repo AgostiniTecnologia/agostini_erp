@@ -15,11 +15,15 @@ class TransportOrderItem extends Model
     use HasFactory, HasUuids, SoftDeletes;
 
     protected $primaryKey = 'uuid';
+
     public $incrementing = false;
+
     protected $keyType = 'string';
 
     public const STATUS_PENDING = 'pending';
+
     public const STATUS_COMPLETED = 'completed';
+
     public const STATUS_RETURNED = 'returned';
 
     protected $fillable = [
@@ -41,7 +45,7 @@ class TransportOrderItem extends Model
     ];
 
     protected $casts = [
-        'quantity' => 'integer',
+        'quantity' => 'decimal:4',
         'delivery_photos' => 'array',
         'delivered_at' => 'datetime',
         'returned_at' => 'datetime',
@@ -50,7 +54,7 @@ class TransportOrderItem extends Model
 
     protected static function booted(): void
     {
-        static::addGlobalScope(new TenantScope());
+        static::addGlobalScope(new TenantScope);
 
         static::creating(function (Model $model) {
             if (empty($model->company_id) && Auth::check() && Auth::user()->company_id) {
@@ -89,4 +93,3 @@ class TransportOrderItem extends Model
         return $this->belongsTo(User::class, 'processed_by_user_id', 'uuid');
     }
 }
-

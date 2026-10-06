@@ -4,7 +4,6 @@ namespace App\Filament\Resources\TransportOrderResource\Pages;
 
 use App\Filament\Resources\TransportOrderResource;
 use App\Models\TransportOrder; // Importe o modelo
-use Filament\Actions;
 use Filament\Notifications\Notification; // Para notificações (opcional)
 use Filament\Resources\Pages\EditRecord;
 use Illuminate\Database\Eloquent\Model;
@@ -15,10 +14,10 @@ class EditTransportOrder extends EditRecord
 
     protected function getFormActions(): array
     {
-        // Oculta a ação de salvar se a ordem estiver concluída
+        // A carga deixa de ser editável assim que é aprovada.
         return [
             $this->getSaveFormAction()
-                ->visible(fn (?Model $record): bool => $record instanceof TransportOrder && $record->status !== TransportOrder::STATUS_COMPLETED),
+                ->visible(fn (?Model $record): bool => $record instanceof TransportOrder && $record->status === TransportOrder::STATUS_PENDING),
             $this->getCancelFormAction(),
         ];
     }
@@ -27,10 +26,10 @@ class EditTransportOrder extends EditRecord
     // Isso pode ser feito no `mount()` ou `beforeFill()`
     protected function beforeFill(): void
     {
-        if ($this->record instanceof TransportOrder && $this->record->status === TransportOrder::STATUS_COMPLETED) {
+        if ($this->record instanceof TransportOrder && $this->record->status !== TransportOrder::STATUS_PENDING) {
             Notification::make()
-                ->title('Ordem Concluída')
-                ->body('Ordens de transporte concluídas não podem ser editadas.')
+                ->title('Ordem bloqueada para edição')
+                ->body('Somente ordens de transporte pendentes podem ser alteradas.')
                 ->warning()
                 ->send();
 
