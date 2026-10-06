@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Client;
 use App\Models\ProductionOrder;
 use App\Models\ProductionOrderItem;
 use App\Models\TransportOrder;
@@ -23,11 +24,9 @@ class ProductionToTransportService
             ->whereHas('items')
             ->whereDoesntHave('items', function (Builder $items): void {
                 $items
-                    ->whereNull('sales_order_item_id')
-                    ->orWhere('quantity_planned', '<=', 0)
-                    ->orWhereColumn('quantity_produced', '<', 'quantity_planned')
+                    ->where('quantity_planned', '<=', 0)
                     ->orWhereHas(
-                        'salesOrderItem.transportOrderItems.transportOrder',
+                        'transportOrderItems.transportOrder',
                         fn (Builder $transportOrder): Builder => $transportOrder
                             ->where('status', '!=', TransportOrder::STATUS_CANCELLED)
                     );
@@ -74,8 +73,11 @@ class ProductionToTransportService
     /**
      * @param  array<int, string>  $productionOrderUuids
      */
-    public function transferTo(TransportOrder $transportOrder, array $productionOrderUuids): int
-    {
+    public function transferTo(
+        TransportOrder $transportOrder,
+        array $productionOrderUuids,
+        ?string $fallbackClientUuid = null
+    ): int {
         $productionOrderUuids = array_values(array_unique(array_filter($productionOrderUuids)));
 
         if ($productionOrderUuids === []) {
@@ -84,7 +86,7 @@ class ProductionToTransportService
             ]);
         }
 
-        return DB::transaction(function () use ($transportOrder, $productionOrderUuids): int {
+        return DB::transaction(function () use ($transportOrder, $productionOrderUuids, $fallbackClientUuid): int {
             $transportOrder = TransportOrder::query()
                 ->whereKey($transportOrder->getKey())
                 ->lockForUpdate()
@@ -95,6 +97,13 @@ class ProductionToTransportService
                     'production_orders' => 'Somente ordens de transporte pendentes podem receber produções.',
                 ]);
             }
+
+            $fallbackClient = filled($fallbackClientUuid)
+                ? Client::query()
+                    ->whereKey($fallbackClientUuid)
+                    ->where('company_id', $transportOrder->company_id)
+                    ->first()
+                : null;
 
             $productionOrders = ProductionOrder::query()
                 ->whereIn('uuid', $productionOrderUuids)
@@ -140,11 +149,17 @@ class ProductionToTransportService
                     $this->validateProductionItem($productionOrder, $productionItem);
 
                     $salesOrderItem = $productionItem->salesOrderItem;
-                    $salesOrder = $salesOrderItem->salesOrder;
-                    $client = $salesOrder->client;
+                    $salesOrder = $salesOrderItem?->salesOrder;
+                    $client = $salesOrder?->client ?? $fallbackClient;
+
+                    if (! $client) {
+                        throw ValidationException::withMessages([
+                            'fallback_client_id' => "Informe o cliente da OP {$productionOrder->order_number}.",
+                        ]);
+                    }
 
                     $alreadyAllocated = TransportOrderItem::query()
-                        ->where('sales_order_item_id', $salesOrderItem->uuid)
+                        ->where('production_order_item_id', $productionItem->uuid)
                         ->whereHas(
                             'transportOrder',
                             fn (Builder $query): Builder => $query
@@ -162,11 +177,13 @@ class ProductionToTransportService
                         'company_id' => $transportOrder->company_id,
                         'client_id' => $client->uuid,
                         'product_id' => $productionItem->product_uuid,
-                        'sales_order_item_id' => $salesOrderItem->uuid,
+                        'sales_order_item_id' => $salesOrderItem?->uuid,
+                        'production_order_item_id' => $productionItem->uuid,
                         'quantity' => $productionItem->quantity_planned,
                         'delivery_address_snapshot' => $client->getFullAddress(),
                         'status' => TransportOrderItem::STATUS_PENDING,
-                        'notes' => "Origem: {$productionOrder->order_number} / {$salesOrder->order_number}",
+                        'notes' => 'Origem: '.$productionOrder->order_number
+                            .($salesOrder ? " / {$salesOrder->order_number}" : ''),
                     ]);
 
                     $createdItems++;
@@ -179,23 +196,17 @@ class ProductionToTransportService
 
     private function validateProductionItem(ProductionOrder $productionOrder, ProductionOrderItem $productionItem): void
     {
-        if (! $productionItem->salesOrderItem?->salesOrder?->client) {
-            throw ValidationException::withMessages([
-                'production_orders' => "A OP {$productionOrder->order_number} não possui uma origem de venda e cliente válidos.",
-            ]);
-        }
-
-        if ($productionItem->company_id !== $productionItem->salesOrderItem->company_id
-            || $productionItem->company_id !== $productionItem->salesOrderItem->salesOrder->company_id) {
+        if ($productionItem->salesOrderItem
+            && ($productionItem->company_id !== $productionItem->salesOrderItem->company_id
+                || $productionItem->company_id !== $productionItem->salesOrderItem->salesOrder?->company_id)) {
             throw ValidationException::withMessages([
                 'production_orders' => "A OP {$productionOrder->order_number} possui uma origem de outra empresa.",
             ]);
         }
 
-        if ((float) $productionItem->quantity_planned <= 0
-            || (float) $productionItem->quantity_produced < (float) $productionItem->quantity_planned) {
+        if ((float) $productionItem->quantity_planned <= 0) {
             throw ValidationException::withMessages([
-                'production_orders' => "A OP {$productionOrder->order_number} possui itens com produção incompleta.",
+                'production_orders' => "A OP {$productionOrder->order_number} possui um item sem quantidade planejada.",
             ]);
         }
     }

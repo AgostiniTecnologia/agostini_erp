@@ -94,7 +94,7 @@ class ItemsRelationManager extends RelationManager
             // ->recordTitleAttribute('product.name') // Exemplo
             ->columns([
                 Tables\Columns\TextColumn::make('delivery_sequence')->label('Seq.')->sortable(),
-                Tables\Columns\TextColumn::make('salesOrderItem.productionOrderItem.productionOrder.order_number')
+                Tables\Columns\TextColumn::make('productionOrderItem.productionOrder.order_number')
                     ->label('OP')
                     ->placeholder('Manual')
                     ->searchable(),
@@ -149,12 +149,19 @@ class ItemsRelationManager extends RelationManager
                             ->searchable()
                             ->preload()
                             ->required()
-                            ->helperText('São exibidas apenas OPs totalmente concluídas e ainda não vinculadas a uma carga ativa.'),
+                            ->helperText('São exibidas todas as OPs concluídas que ainda não estão em uma carga ativa.'),
+                        Forms\Components\Select::make('fallback_client_id')
+                            ->label('Cliente para OP sem pedido de venda')
+                            ->options(fn (): array => Client::query()->orderBy('name')->pluck('name', 'uuid')->all())
+                            ->searchable()
+                            ->preload()
+                            ->helperText('Deixe em branco quando a OP já possuir um pedido de venda vinculado.'),
                     ])
                     ->action(function (array $data): void {
                         $createdItems = app(ProductionToTransportService::class)->transferTo(
                             $this->getOwnerRecord(),
-                            $data['production_orders'] ?? []
+                            $data['production_orders'] ?? [],
+                            $data['fallback_client_id'] ?? null
                         );
 
                         $this->recalculateSequence();

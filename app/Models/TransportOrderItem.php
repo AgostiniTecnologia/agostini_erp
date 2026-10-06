@@ -32,6 +32,7 @@ class TransportOrderItem extends Model
         'client_id',
         'product_id',
         'sales_order_item_id',
+        'production_order_item_id',
         'quantity',
         'delivery_address_snapshot',
         'status',
@@ -86,6 +87,11 @@ class TransportOrderItem extends Model
     public function salesOrderItem(): BelongsTo
     {
         return $this->belongsTo(SalesOrderItem::class, 'sales_order_item_id', 'uuid');
+    }
+
+    public function productionOrderItem(): BelongsTo
+    {
+        return $this->belongsTo(ProductionOrderItem::class, 'production_order_item_id', 'uuid');
     }
 
     public function processedBy(): BelongsTo

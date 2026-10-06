@@ -62,6 +62,7 @@ class ProductionToTransportTest extends TestCase
         $this->assertDatabaseHas('transport_order_items', [
             'transport_order_id' => $transportOrder->uuid,
             'sales_order_item_id' => $salesOrderItem->uuid,
+            'production_order_item_id' => $productionOrder->items()->first()->uuid,
             'quantity' => 2.5,
             'status' => 'pending',
         ]);
@@ -94,14 +95,48 @@ class ProductionToTransportTest extends TestCase
         $this->assertArrayHasKey($productionOrder->uuid, $service->availableOrderOptions());
     }
 
-    public function test_incomplete_production_is_not_available_even_if_status_is_completed(): void
+    public function test_completed_status_makes_legacy_production_available_even_with_quantity_divergence(): void
     {
         [$productionOrder] = $this->scenario(producedQuantity: 2.0);
 
-        $this->assertArrayNotHasKey(
+        $this->assertArrayHasKey(
             $productionOrder->uuid,
             app(ProductionToTransportService::class)->availableOrderOptions()
         );
+    }
+
+    public function test_completed_manual_production_is_listed_and_can_use_an_informed_client(): void
+    {
+        [$company, $user, $client, $product] = $this->salesContext();
+        $productionOrder = ProductionOrder::query()->create([
+            'company_id' => $company->uuid,
+            'order_number' => 'OP-MANUAL-0001',
+            'status' => ProductionOrder::STATUS_COMPLETED,
+            'completion_date' => now(),
+            'user_uuid' => $user->uuid,
+        ]);
+        $productionItem = ProductionOrderItem::query()->create([
+            'company_id' => $company->uuid,
+            'production_order_uuid' => $productionOrder->uuid,
+            'product_uuid' => $product->uuid,
+            'quantity_planned' => 4,
+            'quantity_produced' => 4,
+        ]);
+        $transportOrder = TransportOrder::query()->create([
+            'company_id' => $company->uuid,
+            'status' => TransportOrder::STATUS_PENDING,
+        ]);
+        $service = app(ProductionToTransportService::class);
+
+        $this->assertArrayHasKey($productionOrder->uuid, $service->availableOrderOptions());
+        $service->transferTo($transportOrder, [$productionOrder->uuid], $client->uuid);
+
+        $this->assertDatabaseHas('transport_order_items', [
+            'transport_order_id' => $transportOrder->uuid,
+            'production_order_item_id' => $productionItem->uuid,
+            'sales_order_item_id' => null,
+            'client_id' => $client->uuid,
+        ]);
     }
 
     private function scenario(float $producedQuantity = 2.5): array

@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 // Para os logs
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Auth;
@@ -62,6 +63,11 @@ class ProductionOrderItem extends Model
     public function salesOrderItem(): BelongsTo
     {
         return $this->belongsTo(SalesOrderItem::class, 'sales_order_item_id', 'uuid');
+    }
+
+    public function transportOrderItems(): HasMany
+    {
+        return $this->hasMany(TransportOrderItem::class, 'production_order_item_id', 'uuid');
     }
 
     /**
