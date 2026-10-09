@@ -388,7 +388,7 @@ class ProcessVisitPage extends Page implements HasForms
         return Action::make('finalizeVisitWithOrder')
             ->label('Finalizar Visita')
             ->icon('heroicon-o-check-circle')
-            ->color('success')
+            ->color('primary')
             ->requiresConfirmation()
             ->modalHeading('Confirmar Finalização da Visita')
             ->modalDescription('Deseja realmente finalizar esta visita? O pedido associado será movido para "Pendente".')

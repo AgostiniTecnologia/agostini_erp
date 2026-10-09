@@ -42,6 +42,16 @@ class ProductionToTransportTest extends TestCase
 
         $salesOrder->update(['status' => SalesOrder::STATUS_APPROVED]);
 
+        $productionOrder = $salesOrder->fresh()->productionOrder;
+
+        $this->assertNotNull($productionOrder);
+        $this->assertSame($salesOrder->uuid, $productionOrder->sales_order_id);
+        $this->assertTrue($productionOrder->salesOrder->is($salesOrder));
+        $this->assertDatabaseHas('production_orders', [
+            'uuid' => $productionOrder->uuid,
+            'sales_order_id' => $salesOrder->uuid,
+        ]);
+
         $this->assertDatabaseHas('production_order_items', [
             'sales_order_item_id' => $salesOrderItem->uuid,
             'product_uuid' => $product->uuid,

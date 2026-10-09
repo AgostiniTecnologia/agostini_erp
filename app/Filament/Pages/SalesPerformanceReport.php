@@ -210,7 +210,7 @@ class SalesPerformanceReport extends Page implements HasForms
           \Filament\Actions\Action::make('baixar_relatorio_vendas')
             ->label('Visualizar Relatório')
             ->icon('heroicon-o-printer')
-            ->color('primary')
+            ->color('gray')
             ->action(function () {
                 $start = $this->start_month;
                 $end   = $this->end_month;

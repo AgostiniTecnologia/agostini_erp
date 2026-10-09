@@ -27,7 +27,7 @@
 
                 <x-filament::button
                     size="sm"
-                    color="primary"
+                    color="gray"
                     icon="heroicon-o-document-arrow-down"
                     wire:click="downloadReport"
                     wire:loading.attr="disabled"

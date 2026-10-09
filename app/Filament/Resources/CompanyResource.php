@@ -17,6 +17,7 @@ use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Tabs;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
 use Filament\Forms\Form;
 use Filament\Forms\Get;
 use Filament\Forms\Set;
@@ -154,6 +155,10 @@ class CompanyResource extends Resource
                                     ->required()
                                     ->native(false)
                                     ->helperText('Define se o painel da página inicial abre no mapa ou na lista.'),
+                                Toggle::make('production_order_qr_control')
+                                    ->label('Controle de OP')
+                                    ->default(true)
+                                    ->helperText('Ativado: a produção deve ser concluída obrigatoriamente pelo QR Code. Desativado: a empresa pode usar o QR Code ou concluir a OP manualmente pelo status.'),
                                 TextInput::make('fold_margin')
                                     ->label('Margem de dobra simples')
                                     ->suffix(fn (Get $get): string => $get('length_unit') ?? LengthUnit::Meter->value)

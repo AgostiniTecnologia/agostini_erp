@@ -59,7 +59,16 @@ class ProductionOrderResource extends Resource
                                     'Cancelada' => 'Cancelada',
                                 ];
 
-                                if ($record && in_array($record->status, ProductionOrder::automaticallyManagedStatuses(), true)) {
+                                $company = $record?->company ?? auth()->user()?->company;
+
+                                if ($company && ! $company->production_order_qr_control) {
+                                    $options[ProductionOrder::STATUS_COMPLETED] = $record?->status === ProductionOrder::STATUS_COMPLETED
+                                        ? 'Concluída'
+                                        : 'Concluir';
+                                }
+
+                                if ($record
+                                    && in_array($record->status, [ProductionOrder::STATUS_IN_PROGRESS, ProductionOrder::STATUS_PAUSED], true)) {
                                     $options[$record->status] = $record->status.' (automático)';
                                 }
 
@@ -67,7 +76,11 @@ class ProductionOrderResource extends Resource
                             })
                             ->required()
                             ->default('Pendente')
+                            ->disabled(fn (?ProductionOrder $record): bool => $record?->status === ProductionOrder::STATUS_COMPLETED)
                             ->searchable()
+                            ->helperText(fn (?ProductionOrder $record): string => (($record?->company ?? auth()->user()?->company)?->production_order_qr_control ?? true)
+                                ? 'A conclusão é controlada obrigatoriamente pela leitura do QR Code.'
+                                : 'Selecione Concluir para finalizar manualmente a OP e registrar 100% de progresso.')
                             ->columnSpan(1),
 
                         Forms\Components\DatePicker::make('due_date')
@@ -112,6 +125,16 @@ class ProductionOrderResource extends Resource
             ->columns([
                 Tables\Columns\TextColumn::make('order_number')
                     ->label('Nº Ordem')
+                    ->searchable()
+                    ->sortable(),
+
+                Tables\Columns\TextColumn::make('salesOrder.order_number')
+                    ->label('Pedido de Venda')
+                    ->placeholder('Ordem manual')
+                    ->color('primary')
+                    ->url(fn (ProductionOrder $record): ?string => $record->salesOrder
+                        ? SalesOrderResource::getUrl('edit', ['record' => $record->salesOrder])
+                        : null)
                     ->searchable()
                     ->sortable(),
 
@@ -191,7 +214,7 @@ class ProductionOrderResource extends Resource
                 Tables\Actions\Action::make('pdf')
                     ->label('Visualizar PDF')
                     ->icon('heroicon-o-eye')
-                    ->color('info')
+                    ->color('gray')
                     ->url(fn (ProductionOrder $record): string => route('production-orders.pdf', $record->uuid))
                     ->openUrlInNewTab(),
                 Tables\Actions\EditAction::make(),

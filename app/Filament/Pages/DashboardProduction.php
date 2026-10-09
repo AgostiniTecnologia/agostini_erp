@@ -28,7 +28,7 @@ class DashboardProduction extends \Filament\Pages\Page
             Action::make('Gerar Relatório')
                 ->label('Visualizar Relatório')
                 ->button()
-                ->color('primary')
+                ->color('gray')
                 ->icon('heroicon-o-document-text')
                 // 2. Usar o 'action' do Filament para executar o JavaScript
                 ->action(function () {

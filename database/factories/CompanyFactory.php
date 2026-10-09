@@ -45,6 +45,7 @@ class CompanyFactory extends Factory
             'length_unit' => 'm',
             'weight_unit' => 'kg',
             'sales_visits_default_view' => 'map',
+            'production_order_qr_control' => true,
             'fold_margin' => 5,
             'fold_margin_double' => 5,
             'length_flap_default' => 60,

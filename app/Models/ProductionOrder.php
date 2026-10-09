@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Auth; // <-- Import the Auth facade
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Carbon; // Importar Carbon para now()
 use Illuminate\Validation\ValidationException;
 
@@ -33,6 +34,7 @@ class ProductionOrder extends Model
      */
     protected $fillable = [
         'company_id', // Good, it's fillable
+        'sales_order_id',
         'order_number',
         'due_date',
         'start_date',
@@ -61,6 +63,11 @@ class ProductionOrder extends Model
     public function company(): BelongsTo
     {
         return $this->belongsTo(Company::class, 'company_id', 'uuid');
+    }
+
+    public function salesOrder(): BelongsTo
+    {
+        return $this->belongsTo(SalesOrder::class, 'sales_order_id', 'uuid');
     }
 
     /**
@@ -126,6 +133,15 @@ class ProductionOrder extends Model
         $this->saveAutomatedStatusTransition();
     }
 
+    public function requiresQrCodeControl(): bool
+    {
+        $company = $this->relationLoaded('company')
+            ? $this->company
+            : $this->company()->first();
+
+        return $company?->production_order_qr_control ?? true;
+    }
+
     public static function automaticallyManagedStatuses(): array
     {
         return [self::STATUS_IN_PROGRESS, self::STATUS_PAUSED, self::STATUS_COMPLETED];
@@ -156,12 +172,39 @@ class ProductionOrder extends Model
 
         static::updating(function (ProductionOrder $productionOrder): void {
             if ($productionOrder->isDirty('status')
-                && in_array($productionOrder->status, self::automaticallyManagedStatuses(), true)
-                && ! $productionOrder->automatedStatusTransition) {
+                && $productionOrder->getOriginal('status') === self::STATUS_COMPLETED) {
                 throw ValidationException::withMessages([
-                    'status' => 'Este status é atualizado automaticamente pelo apontamento da produção.',
+                    'status' => 'Uma Ordem de Produção concluída não pode ter seu status alterado.',
                 ]);
             }
+
+            if ($productionOrder->isDirty('status')
+                && in_array($productionOrder->status, self::automaticallyManagedStatuses(), true)
+                && ! $productionOrder->automatedStatusTransition) {
+                if ($productionOrder->status === self::STATUS_COMPLETED
+                    && ! $productionOrder->requiresQrCodeControl()) {
+                    $productionOrder->completion_date ??= now();
+
+                    return;
+                }
+
+                throw ValidationException::withMessages([
+                    'status' => 'Este status é atualizado automaticamente pela leitura do QR Code.',
+                ]);
+            }
+        });
+
+        static::updated(function (ProductionOrder $productionOrder): void {
+            if (! $productionOrder->wasChanged('status')
+                || $productionOrder->status !== self::STATUS_COMPLETED
+                || $productionOrder->automatedStatusTransition
+                || $productionOrder->requiresQrCodeControl()) {
+                return;
+            }
+
+            $productionOrder->items()->update([
+                'quantity_produced' => DB::raw('quantity_planned'),
+            ]);
         });
     }
 }

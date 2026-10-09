@@ -142,6 +142,7 @@ class RelatoriosCargas extends Page implements HasForms
         return [
             \Filament\Actions\Action::make('filtrar')
                 ->label('Gerar Relatório')
+                ->color('gray')
                 ->submit('gerarRelatorio'),
         ];
     }
@@ -156,7 +157,7 @@ class RelatoriosCargas extends Page implements HasForms
             \Filament\Actions\Action::make('baixar_relatorio_transporte')
                 ->label('Visualizar Relatório')
                 ->icon('heroicon-o-printer')
-                ->color('primary')
+                ->color('gray')
                 ->action(function () {
                     $start = $this->data_inicio;
                     $end   = $this->data_fim;

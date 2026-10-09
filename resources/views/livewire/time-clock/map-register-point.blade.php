@@ -19,8 +19,8 @@
             border-radius: 5px;
             cursor: pointer;
         }
-        .btn-confirm { background-color: #28a745; } /* Verde */
-        .btn-confirm:hover { background-color: #218838; }
+        .btn-confirm { background-color: #2563eb; } /* Azul */
+        .btn-confirm:hover { background-color: #1d4ed8; }
         .btn-cancel { background-color: #dc3545; margin-left: 10px; } /* Vermelho */
         .btn-cancel:hover { background-color: #c82333; }
         #loading-message, #error-message { text-align: center; padding-top: 20px; }

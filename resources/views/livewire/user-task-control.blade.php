@@ -83,8 +83,8 @@
                                  </span>
                                 <x-filament::button
                                     wire:click="resumeTask"
-                                    class="bg-green-600 hover:bg-green-700 text-black text-sm px-4 py-2 rounded-lg shadow-md transition-all"
-                                    color="warning"
+                                    class="text-sm px-4 py-2 rounded-lg shadow-md transition-all"
+                                    color="primary"
                                 >
                                     Retomar Produção
                                 </x-filament::button>
@@ -347,7 +347,7 @@
                     </x-filament::button>
                     <x-filament::button
                         type="submit"
-                        color="success"
+                        color="primary"
                         wire:loading.attr="disabled"
                         wire:target="finishTask"
                         x-bind:disabled="$wire.finishQuantityProduced === null || $wire.finishQuantityProduced < 0"

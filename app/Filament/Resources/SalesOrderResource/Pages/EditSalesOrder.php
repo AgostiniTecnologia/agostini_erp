@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\SalesOrderResource\Pages;
 
 use App\Filament\Resources\SalesOrderResource;
+use App\Filament\Resources\ProductionOrderResource;
 use App\Models\SalesOrder; // Importar o modelo
 use Filament\Actions;
 use Filament\Resources\Pages\EditRecord;
@@ -19,9 +20,18 @@ class EditSalesOrder extends EditRecord
             Actions\Action::make('generatePdf')
                 ->label('Visualizar PDF')
                 ->icon('heroicon-o-eye')
-                ->color('info')
+                ->color('gray')
                 ->url(fn (SalesOrder $record): string => route('sales-orders.pdf', $record->uuid))
                 ->openUrlInNewTab(),
+
+            Actions\Action::make('viewProductionOrder')
+                ->label('Visualizar Ordem de Produção')
+                ->icon('heroicon-o-clipboard-document-list')
+                ->color('primary')
+                ->url(fn (SalesOrder $record): ?string => $record->productionOrder
+                    ? ProductionOrderResource::getUrl('edit', ['record' => $record->productionOrder])
+                    : null)
+                ->visible(fn (SalesOrder $record): bool => $record->productionOrder()->exists()),
 
             Actions\Action::make('approveOrder')
                 ->label('Aprovar Pedido')

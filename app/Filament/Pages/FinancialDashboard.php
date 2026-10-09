@@ -180,7 +180,7 @@ class FinancialDashboard extends Page implements HasForms
         Actions\Action::make('baixar_relatorio_financeiro')
             ->label('Visualizar Relatório')
             ->icon('heroicon-o-printer')
-            ->color('primary')
+            ->color('gray')
             ->action(function () {
                 // Pega as datas do filtro
                 $start = $this->data['startDate'];

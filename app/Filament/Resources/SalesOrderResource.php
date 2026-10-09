@@ -165,6 +165,14 @@ class SalesOrderResource extends Resource
                     ->label('Nº Pedido')
                     ->searchable()
                     ->sortable(),
+                Tables\Columns\TextColumn::make('productionOrder.order_number')
+                    ->label('Ordem de Produção')
+                    ->placeholder('Não gerada')
+                    ->color('primary')
+                    ->url(fn (SalesOrder $record): ?string => $record->productionOrder
+                        ? ProductionOrderResource::getUrl('edit', ['record' => $record->productionOrder])
+                        : null)
+                    ->sortable(),
                 Tables\Columns\TextColumn::make('client.name')
                     ->label('Cliente')
                     ->searchable()

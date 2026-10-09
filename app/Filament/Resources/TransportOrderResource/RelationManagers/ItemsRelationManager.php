@@ -136,7 +136,7 @@ class ItemsRelationManager extends RelationManager
                 Tables\Actions\Action::make('addCompletedProductionOrders')
                     ->label('Adicionar produções concluídas')
                     ->icon('heroicon-o-arrow-right-circle')
-                    ->color('success')
+                    ->color('primary')
                     ->modalHeading('Selecionar produções concluídas')
                     ->modalDescription('Cada produto selecionado será incluído nesta ordem de transporte com o cliente e endereço do pedido de venda.')
                     ->modalSubmitActionLabel('Adicionar à carga')

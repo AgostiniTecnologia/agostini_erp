@@ -7,7 +7,7 @@
             {{ $this->form }}
 
             <div class="mt-4">
-                <x-filament::button type="submit">
+                <x-filament::button type="submit" color="gray">
                     Gerar Relatório
                 </x-filament::button>
             </div>

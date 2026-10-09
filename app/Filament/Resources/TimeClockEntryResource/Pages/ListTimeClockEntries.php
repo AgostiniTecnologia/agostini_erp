@@ -23,6 +23,15 @@ class ListTimeClockEntries extends ListRecords
     {
         return [
             // Actions\CreateAction::make(),
+            Actions\Action::make('timeClockReport')
+                ->label('Visualizar Relatório RH')
+                ->url(fn () => route('time.clock.pdf', [
+                    'inicio' => now()->startOfMonth()->format('Y-m-d'),
+                    'fim' => now()->endOfMonth()->format('Y-m-d'),
+                ]))
+                ->openUrlInNewTab()
+                ->color('gray')
+                ->icon('heroicon-o-document'),
             $this->getManualCreateAction(),
         ];
     }

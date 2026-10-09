@@ -9,7 +9,9 @@
     $bgColor = 'bg-gray-200 dark:bg-gray-700';
     $barColor = 'bg-primary-500';
 
-    if ($planned > 0) {
+    if ($record->status === \App\Models\ProductionOrder::STATUS_COMPLETED) {
+        $percentage = 100;
+    } elseif ($planned > 0) {
         $percentage = min(100, max(0, round(($produced / $planned) * 100)));
     }
 @endphp

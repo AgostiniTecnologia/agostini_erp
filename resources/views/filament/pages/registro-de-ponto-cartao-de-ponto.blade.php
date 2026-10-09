@@ -19,18 +19,15 @@
     {{-- Botão de Impressão --}}
     <div class="absolute top-14 right-2 flex justify-end no-print">
         <div class="py-4">
-            <button
+            <x-filament::button
                 id="imprimir_relatorio"
                 type="button"
+                color="gray"
+                icon="heroicon-o-printer"
                 onclick="window.print()"
-                class="filament-button filament-button-size-md filament-button-color-primary inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5 mr-1 -ml-1">
-                    <path fill-rule="evenodd" d="M5 2.75C5 1.784 5.784 1 6.75 1h6.5c.966 0 1.75.784 1.75 1.75v3.5A2.25 2.25 0 0 1 17.25 8.5H19a1 1 0 0 1 1 1v.75a.75.75 0 0 1-1.5 0V9.5h-.055a3.252 3.252 0 0 1-3.046-2.204L15.75 6.25v2.25A3.75 3.75 0 0 1 12 12.25H8A3.75 3.75 0 0 1 4.25 8.5v-2.5L3.105 7.296A3.25 3.25 0 0 1 .055 9.5H0V8.75a1 1 0 0 1 1-1h1.75A2.25 2.25 0 0 1 5 6.25v-3.5ZM6.5 2.5v3.75a.75.75 0 0 0 .75.75h5.5a.75.75 0 0 0 .75-.75V2.5h-7Z" clip-rule="evenodd" />
-                    <path d="M3.5 14A1.5 1.5 0 0 0 5 15.5h10A1.5 1.5 0 0 0 16.5 14v-1.5h-13V14Z" />
-                    <path d="M2 10.5a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v1.879a.75.75 0 0 1-.36.644l-2.25 1.35A2.751 2.751 0 0 1 13.25 15H6.75a2.751 2.751 0 0 1-2.14-.627l-2.25-1.35A.75.75 0 0 1 2 12.379V10.5ZM3.5 12.621l2.25 1.35A1.252 1.252 0 0 0 6.75 14.5h6.5c.491 0 .942-.284 1.14-.729l2.25-1.35V12h-13v.621Z" />
-                </svg>
+            >
                 Imprimir Relatório
-            </button>
+            </x-filament::button>
         </div>
     </div>
 

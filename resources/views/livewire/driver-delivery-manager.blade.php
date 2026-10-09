@@ -53,7 +53,7 @@
                             wire:click="openQrScanModal('{{ $nextDeliveryItem->uuid }}')"
                             size="xs"
                             icon="heroicon-m-qr-code"
-                            color="success"
+                            color="primary"
                             class="w-full"
                         >
                             Realizar entrega
@@ -207,7 +207,7 @@
                     <x-filament::button color="danger" wire:click="confirmDelivery(false)" size="xs"> <!-- size="sm" para size="xs" -->
                         Não (Rejeitada)
                     </x-filament::button>
-                    <x-filament::button color="success" wire:click="confirmDelivery(true)" size="xs"> <!-- size="sm" para size="xs" -->
+                    <x-filament::button color="primary" wire:click="confirmDelivery(true)" size="xs"> <!-- size="sm" para size="xs" -->
                         Sim (Aceita)
                     </x-filament::button>
                 </div>

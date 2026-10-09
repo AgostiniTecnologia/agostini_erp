@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -176,6 +177,7 @@ class SalesOrder extends Model
         DB::transaction(function () use ($salesOrder) {
             $productionOrderData = [
                 'company_id' => $salesOrder->company_id,
+                'sales_order_id' => $salesOrder->uuid,
                 'status' => 'Pendente', // Status inicial da Ordem de Produção
                 'due_date' => $salesOrder->delivery_deadline,
                 'notes' => 'Ordem de Produção gerada automaticamente a partir do Pedido de Venda: '.$salesOrder->order_number,
@@ -276,6 +278,11 @@ class SalesOrder extends Model
     public function items(): HasMany
     {
         return $this->hasMany(SalesOrderItem::class, 'sales_order_id', 'uuid');
+    }
+
+    public function productionOrder(): HasOne
+    {
+        return $this->hasOne(ProductionOrder::class, 'sales_order_id', 'uuid');
     }
 
     // Método para recalcular o total do pedido
